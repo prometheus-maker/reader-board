@@ -282,6 +282,7 @@ New releases as they are tested: <a href="feed.xml">Atom feed</a>.</div>
 <p class="lead">{esc(names)}: each one tested on the same {n:,} {esc(CFG["formats"][fmt].get("lead") or f'odd real-world {title if not CFG["formats"][fmt].get("per_ext") else ""} files from bug reports and fuzzers')}.
 New PyPI releases are tested again by themselves. Updated {built}.</p>
 {sec.replace(f'<h2 id="{fmt}">{esc(title)}</h2>', '', 1)}
+{hosted(CFG["formats"][fmt])}
 {method}"""
         (out / f"{fmt}.html").write_text(page(f"{CFG['formats'][fmt].get('question') or f'Python {title} libraries compared on {n:,} broken and odd files:'} ({names})", fbody,
                                               f"Which Python {title} library fails least on real-world files? {names} tested on {n:,} files, re-tested on every release."))
@@ -299,6 +300,17 @@ def write_sitemap(out, sections, vs):
                     and p.stem not in {x[0] for x in sections})]
     (out / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
                                      + "".join(f"<url><loc>{SITE}{u}</loc><lastmod>{day}</lastmod></url>\n" for u in urls) + "</urlset>\n")
+
+
+def hosted(fcfg):
+    """A small, disclosed pointer to my own hosted API for this kind of job (libs.json "hosted"), after the tables."""
+    h = fcfg.get("hosted")
+    if not h:
+        return ""
+    return (f'<p class="mut" style="border-left:3px solid var(--line);padding:2px 10px">Don\'t want to run it yourself? '
+            f'I also run <a href="{esc(h["url"])}" target="_blank" rel="noopener">{esc(h["name"])}</a> as a pay-per-use '
+            f'API on Apify (it uses {esc(h["uses"])}). Disclosure: that tool is mine; the rankings above come only from '
+            f'the measurements.</p>')
 
 
 def lib_model(fmt, lib):
@@ -410,6 +422,7 @@ Measured, not opinion; re-tested by itself on every new PyPI release. Updated {b
 {ext_matrix(table, files) if fcfg.get('per_ext') else ''}{group_matrix(table, files, fcfg) if fcfg.get('scored') else ''}
 <h2>Files only {esc(a)} reads ({len(only_a)})</h2>{flist(only_a, rb, b)}
 <h2>Files only {esc(b)} reads ({len(only_b)})</h2>{flist(only_b, ra, a)}
+{hosted(fcfg)}
 <h2>What this does not tell you</h2>
 <p>This compares <b>not breaking</b>: whether each library gets any text out of each file. It does not rank text quality
 (reading order, tables, headings), and speed is one GitHub-hosted runner, default settings, no OCR switched on.

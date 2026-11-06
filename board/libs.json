@@ -36,7 +36,12 @@
    "corpus": "pdfjs",
    "ext": "pdf",
    "blob": "https://github.com/mozilla/pdf.js/blob/{commit}/test/pdfs/{path}",
-   "title": "PDF"
+   "title": "PDF",
+   "hosted": {
+    "url": "https://apify.com/prometheus-maker/pdf-document-to-markdown",
+    "name": "PDF & Document to Markdown",
+    "uses": "pdfplumber and pypdfium2 for PDFs, markitdown for Office files"
+   }
   },
   "docx": {
    "corpus": "poi",
@@ -64,7 +69,12 @@
    "timeout": 180,
    "per_ext": true,
    "mem_mb": 6000,
-   "question": "Which Python tool turns the most kinds of documents into text for AI (RAG)?"
+   "question": "Which Python tool turns the most kinds of documents into text for AI (RAG)?",
+   "hosted": {
+    "url": "https://apify.com/prometheus-maker/pdf-document-to-markdown",
+    "name": "PDF & Document to Markdown",
+    "uses": "pdfplumber and pypdfium2 for PDFs, markitdown for Office files"
+   }
   },
   "ocr": {
    "corpus": "ocr",
@@ -78,7 +88,12 @@
    "lead": "real-world images with known text: 80 receipt photos, 50 document pages and 60 app screenshots",
    "noun": "images",
    "vs_question": "which OCR engine reads more words correctly?",
-   "warmup": "board/warmup.png"
+   "warmup": "board/warmup.png",
+   "hosted": {
+    "url": "https://apify.com/prometheus-maker/image-to-text-ocr",
+    "name": "Image & Scanned PDF to Text OCR",
+    "uses": "RapidOCR for photos and Tesseract for scans, the split this table supports"
+   }
   },
   "speech": {
    "corpus": "speech",
@@ -101,6 +116,11 @@
     "won": "made fewer word errors",
     "what": "word error rate {v}",
     "head": "word error rate"
+   },
+   "hosted": {
+    "url": "https://apify.com/prometheus-maker/audio-video-transcriber",
+    "name": "Audio & Video Transcriber",
+    "uses": "faster-whisper"
    }
   },
   "langid": {
