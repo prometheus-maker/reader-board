@@ -401,7 +401,7 @@ def method_html():
 <ul>
 <li>Each library runs a short recipe from its own docs (<a href="{REPO}/blob/main/board/targets.py">board/targets.py</a>):
 open the file, get all text. Installed with the extras the docs recommend for reading
-(<code>pypdf[full]</code>: AES decryption, Brotli), nothing else. One worker process per CPU, {int(CFG.get('timeout_s', 60))} s per file, killed above 3 GB.</li>
+(<code>pypdf[full]</code>: AES decryption, Brotli), nothing else. One worker process per CPU; per file {' / '.join(f'{t} s' for t in sorted({f.get("timeout", 60) for f in CFG['formats'].values()}))} at most (the any-document table allows longer: some tools load models), killed above the memory limit.</li>
 <li><b>Fails where another reads</b>: the library raised an error, hung or crashed on a file from which another library
 in the same table got text. Files that every library fails on (encrypted, truncated, fuzzed) are not counted against anyone.</li>
 <li><b>Empty where another reads</b>: no error, but no text. This is often the recipe, not the library: for example
