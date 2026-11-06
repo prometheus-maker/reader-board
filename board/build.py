@@ -261,9 +261,10 @@ def build(out):
     vs_html = "".join(f'<a class="g1" href="{n}"><span class="mut">{esc(CFG["formats"][f]["title"])}</span><b style="font-size:17px">{esc(a)} vs {esc(b)}</b></a>'
                       for f, a, b, n in vs)
     body = f"""<h1>Reader board</h1>
-<p class="lead">Which Python library reads <b>PDF, Word, Excel and PowerPoint</b> files without breaking, and which
-<b>OCR engine</b> reads images best? Each one runs on the same odd real-world files from the test collections of pdf.js,
-Apache POI and Apache Tika (bug reports, fuzzers, broken exporters), and OCR engines on images with known text.
+<p class="lead">Which Python library reads <b>PDF, Word, Excel and PowerPoint</b> files without breaking? Which
+<b>OCR engine</b> reads images best, and which <b>speech-to-text</b> engine makes the fewest mistakes? Document
+libraries run on the same odd real-world files from the test collections of pdf.js, Apache POI and Apache Tika (bug
+reports, fuzzers, broken exporters); OCR and speech engines on images and audio with known text.
 Every new release on PyPI is tested again by itself.</p>
 <div class="mut">Updated {built}. Lower is better in the 🔴 🟡 ⏱ columns; the table is sorted by them (the any-document table: by files turned into text). Click a library to
 see every file it failed on, with the error, and what changed between its versions.
