@@ -11,6 +11,7 @@ CFG = json.loads((ROOT / "board/libs.json").read_text())
 REPO = "https://github.com/prometheus-maker/reader-board"
 KILLED = {"TIMEOUT": "hang", "CRASH": "crash", "MEMORY": "memory"}
 UNSUP = {(l["fmt"], l["id"]): re.compile(l["unsupported"]) for l in CFG["libs"] if l.get("unsupported")}
+FORMATS = {(l["fmt"], l["id"]): set(l["formats"]) for l in CFG["libs"] if l.get("formats")}
 
 
 def vkey(v):
@@ -29,7 +30,10 @@ def load_runs():
             for line in f:
                 r = json.loads(line)
                 rx = UNSUP.get((fmt, lib))
-                if rx and not r.get("ok") and rx.search(f"{r.get('etype')}: {r.get('msg', '')}"):
+                ext = r["f"].rsplit(".", 1)[-1].lower()
+                if (fmt, lib) in FORMATS and ext not in FORMATS[(fmt, lib)]:
+                    r["unsupported"] = True  # not in the formats the library's docs list
+                elif rx and not r.get("ok") and rx.search(f"{r.get('etype')}: {r.get('msg', '')}"):
                     r["unsupported"] = True  # the library says it doesn't handle this format: not a failure
                 rows[r["f"]] = r
         runs.setdefault(fmt, {}).setdefault(lib, []).append((ver, meta, rows))
@@ -42,10 +46,10 @@ def load_runs():
 def kind(r):
     if r is None:
         return "missing"
-    if r.get("ok"):
-        return "empty" if r.get("empty") else "text"
     if r.get("unsupported"):
         return "unsupported"
+    if r.get("ok"):
+        return "empty" if r.get("empty") else "text"
     return KILLED.get(r.get("etype"), "error")
 
 
@@ -149,11 +153,15 @@ def build(out):
                 broke, fixed = changes(r0, r1)
                 hist.append({"from": v0, "to": v1, "broke": broke, "fixed": fixed})
             table.append((lib, ver, meta, rows, c, fails, empties, hist))
-        table.sort(key=lambda t: (t[4]["fail_readable"], t[4]["empty_readable"], t[4]["total_s"]))
+        if fcfg.get("per_ext"):  # tools cover different file types: most files turned into text wins
+            table.sort(key=lambda t: (-t[4]["text"], t[4]["fail_readable"], t[4]["total_s"]))
+        else:
+            table.sort(key=lambda t: (t[4]["fail_readable"], t[4]["empty_readable"], t[4]["total_s"]))
         best = table[0]
+        what = (f'text from {best[4]["text"]:,} of {len(files):,} files' if fcfg.get("per_ext") else
+                f'fails on {best[4]["fail_readable"]} of {len(readable):,} readable files')
         glance.append(f'<a class="g1" href="#{fmt}"><span class="mut">{esc(fcfg["title"])}</span>'
-                      f'<b>{esc(best[0])}</b><span class="mut">fails on {best[4]["fail_readable"]} of {len(readable):,} '
-                      f'readable files</span></a>')
+                      f'<b>{esc(best[0])}</b><span class="mut">{what}</span></a>')
         nfiles += len(files)
         nlibs += len(table)
         summary["formats"][fmt] = {"files": len(files), "readable": len(readable), "corpus_commit": commit,
@@ -189,10 +197,10 @@ def build(out):
 <p class="lead">Which Python library reads <b>PDF, Word, Excel and PowerPoint</b> files without breaking? Each one runs on
 {nfiles:,} odd real-world files from the test collections of pdf.js and Apache POI: files from bug reports, fuzzers and
 broken exporters. Every new release on PyPI is tested again by itself.</p>
-<div class="mut">Updated {built}. Lower is better in the 🔴 🟡 ⏱ columns; the table is sorted by them. Click a library to
+<div class="mut">Updated {built}. Lower is better in the 🔴 🟡 ⏱ columns; the table is sorted by them (the any-document table: by files turned into text). Click a library to
 see every file it failed on, with the error, and what changed between its versions.
 New releases as they are tested: <a href="feed.xml">Atom feed</a>.</div>
-<h2>🏆 Most robust per format</h2><div class="glance">{''.join(glance)}</div>
+<h2>🏆 Best per format</h2><div class="glance">{''.join(glance)}</div>
 {''.join(x[3] for x in sections)}
 {method}"""
     (out / "index.html").write_text(page("Reader board: which Python library reads PDF, Word, Excel and PowerPoint files without breaking", body,
@@ -288,6 +296,10 @@ open the file, get all text. Installed with the extras the docs recommend for re
 in the same table got text. Files that every library fails on (encrypted, truncated, fuzzed) are not counted against anyone.</li>
 <li><b>Empty where another reads</b>: no error, but no text. This is often the recipe, not the library: for example
 <code>python-docx</code>'s paragraphs+tables recipe skips headers, text boxes and nested tables. Check the file list.</li>
+<li><b>Any document → text</b>: a file type the tool's docs don't list, or that the tool itself rejects as unsupported,
+counts as "not supported", not as a failure (lists in <a href="{REPO}/blob/main/board/libs.json">board/libs.json</a>).
+Returning a file's raw RTF source counts as empty, for every tool. Each tool runs with default settings: no OCR
+switched on by hand.</li>
 <li>Text <i>quality</i> (order, tables, layout) is not ranked here; this board is about not breaking. The raw results
 have every output's size and hash.</li>
 <li>Same files for every version: the test collections are pinned to one commit. GitHub-hosted runner, so times are
