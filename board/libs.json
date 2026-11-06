@@ -522,7 +522,8 @@
    "fn": "markitdown_md",
    "extra": ["markitdown[pdf]"],
    "also": ["beautifulsoup4", "fuzzysearch", "rapidfuzz"],
-   "jobs": 4
+   "jobs": 4,
+   "note": "Reads the PDF's text layer only (pdfminer): no OCR for scanned pages, no table detection."
   },
   {
    "id": "Docling",
@@ -541,7 +542,8 @@
    "extra": [],
    "also": ["beautifulsoup4", "fuzzysearch", "rapidfuzz"],
    "jobs": 2,
-   "apt": "tesseract-ocr tesseract-ocr-eng"
+   "apt": "tesseract-ocr tesseract-ocr-eng",
+   "note": "Default settings: no OCR and tables come out as plain text lines; both can be switched on in ExtractionConfig."
   },
   {
    "id": "Marker",
