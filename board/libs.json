@@ -44,11 +44,12 @@
   "docs": {
    "corpus": "tika",
    "ext": "pdf,docx,doc,rtf,odt,html,htm,xhtml,xlsx,xls,ods,pptx,ppt,odp,eml,msg,epub,txt,csv,md,json",
-   "title": "Any document → text (for AI / RAG)",
+   "title": "Any document → text",
    "blob": "https://github.com/apache/tika/blob/{commit}/{treepath}",
    "timeout": 180,
    "per_ext": true,
-   "mem_mb": 6000
+   "mem_mb": 6000,
+   "question": "Which Python tool turns any document into text for AI (RAG) with the fewest failures?"
   }
  },
  "libs": [
@@ -205,7 +206,7 @@
    "fn": "kreuzberg_any",
    "extra": [],
    "apt": "tesseract-ocr tesseract-ocr-eng",
-   "unsupported": "^ValidationError: [a-z]+/[-+.\\\\w]+$"
+   "unsupported": "ValidationError: [a-z]+/[-+.\\w]+$"
   }
  ]
 }

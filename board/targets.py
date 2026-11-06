@@ -128,22 +128,30 @@ def python_pptx_text(path):
 _CACHE = {}
 
 
+def _no_raw(out):
+    """Same rule for every tool: returning the file's own RTF source is not text extraction (counts as empty)."""
+    t = out["text"] or ""
+    if t.lstrip().startswith("{\\rtf"):
+        return {"text": "", "returned_raw_rtf": len(t)}
+    return out
+
+
 def markitdown_any(path):
-    return markitdown_text(path)
+    return _no_raw(markitdown_text(path))
 
 
 def docling_any(path):
     if "docling" not in _CACHE:
         from docling.document_converter import DocumentConverter
         _CACHE["docling"] = DocumentConverter()
-    return {"text": _CACHE["docling"].convert(path).document.export_to_markdown()}
+    return _no_raw({"text": _CACHE["docling"].convert(path).document.export_to_markdown()})
 
 
 def unstructured_any(path):
     from unstructured.partition.auto import partition
-    return {"text": "\n\n".join(str(e) for e in partition(filename=path))}
+    return _no_raw({"text": "\n\n".join(str(e) for e in partition(filename=path))})
 
 
 def kreuzberg_any(path):
     import kreuzberg
-    return {"text": kreuzberg.extract_file_sync(path).content}
+    return _no_raw({"text": kreuzberg.extract_file_sync(path).content})

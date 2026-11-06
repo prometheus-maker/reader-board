@@ -112,7 +112,8 @@ text-decoration:none;color:var(--fg)}a.g1:hover{border-color:var(--acc)}a.g1 b{f
 def page(title, body, desc):
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>{esc(title)}</title>
-<meta name="description" content="{esc(desc)}"><style>{CSS}</style></head><body><main>{body}
+<meta name="description" content="{esc(desc)}">
+<link rel="alternate" type="application/atom+xml" title="Reader board releases" href="feed.xml"><style>{CSS}</style></head><body><main>{body}
 <footer>Built by Prometheus <span class="ai">AI agent</span> with <a href="https://github.com/prometheus-maker/corpusdiff">corpusdiff</a>.
 Code, raw results and method: <a href="{REPO}">github.com/prometheus-maker/reader-board</a>.
 Found a mistake? <a href="{REPO}/issues">Open an issue</a>.</footer></main></body></html>"""
@@ -189,7 +190,8 @@ def build(out):
 {nfiles:,} odd real-world files from the test collections of pdf.js and Apache POI: files from bug reports, fuzzers and
 broken exporters. Every new release on PyPI is tested again by itself.</p>
 <div class="mut">Updated {built}. Lower is better in the 🔴 🟡 ⏱ columns; the table is sorted by them. Click a library to
-see every file it failed on, with the error, and what changed between its versions.</div>
+see every file it failed on, with the error, and what changed between its versions.
+New releases as they are tested: <a href="feed.xml">Atom feed</a>.</div>
 <h2>🏆 Most robust per format</h2><div class="glance">{''.join(glance)}</div>
 {''.join(x[3] for x in sections)}
 {method}"""
@@ -198,15 +200,55 @@ see every file it failed on, with the error, and what changed between its versio
     for fmt, names, n, sec in sections:
         title = CFG["formats"][fmt]["title"]
         fbody = f"""<p class="mut"><a href="index.html">← Reader board: all formats</a></p>
-<h1>Which Python {esc(title)} library breaks least?</h1>
-<p class="lead">{esc(names)}: each one tested on the same {n:,} odd real-world {esc(title)} files from bug reports and fuzzers.
+<h1>{esc(CFG["formats"][fmt].get("question") or f"Which Python {title} library breaks least?")}</h1>
+<p class="lead">{esc(names)}: each one tested on the same {n:,} odd real-world {esc(title if not CFG["formats"][fmt].get("per_ext") else "")} files from bug reports and fuzzers.
 New PyPI releases are tested again by themselves. Updated {built}.</p>
 {sec.replace(f'<h2 id="{fmt}">{esc(title)}</h2>', '', 1)}
 {method}"""
-        (out / f"{fmt}.html").write_text(page(f"Python {title} libraries compared on {n:,} broken and odd files: {names}", fbody,
+        (out / f"{fmt}.html").write_text(page(f"{CFG['formats'][fmt].get('question') or f'Python {title} libraries compared on {n:,} broken and odd files:'} ({names})", fbody,
                                               f"Which Python {title} library fails least on real-world files? {names} tested on {n:,} files, re-tested on every release."))
     (out / "summary.json").write_text(json.dumps(summary, indent=1))
     (out / ".nojekyll").write_text("")
+    write_badges(out, summary)
+    write_feed(out, runs)
+
+
+SITE = "https://prometheus-maker.github.io/reader-board/"
+
+
+def write_badges(out, summary):
+    """shields.io endpoint JSON per library and format: https://img.shields.io/endpoint?url=<SITE>badges/<fmt>-<lib>.json"""
+    (out / "badges").mkdir(exist_ok=True)
+    for fmt, f in summary["formats"].items():
+        for rank, l in enumerate(f["libs"], 1):
+            n = l["fail_readable"]
+            color = "brightgreen" if rank == 1 else "green" if n <= 2 else "yellow" if n <= 10 else "orange"
+            (out / "badges" / slug(fmt, l["lib"]).replace(".html", ".json")).write_text(json.dumps({
+                "schemaVersion": 1, "label": f"reader-board {fmt}",
+                "message": f"#{rank} of {len(f['libs'])} · {n} fails on {f['readable']:,} files", "color": color}))
+
+
+def write_feed(out, runs):
+    """Atom feed: one entry per new release tested, with what it broke or fixed."""
+    entries = []
+    for fmt, libs in runs.items():
+        title_f = CFG["formats"].get(fmt, {}).get("title", fmt)
+        for lib, lst in libs.items():
+            for (v0, _, r0), (v1, m1, r1) in zip(lst, lst[1:]):
+                broke, fixed = changes(r0, r1)
+                when = m1.get("finished", "2026-11-06T00:00:00Z")
+                summary = f"{len(broke)} files newly failing, {len(fixed)} fixed, compared with {v0}."
+                entries.append((when, f"{lib} {v1} on {title_f}: {len(broke)} newly failing, {len(fixed)} fixed",
+                                SITE + slug(fmt, lib), summary + (" Newly failing: " + ", ".join(broke[:10]) if broke else "")))
+    entries.sort(reverse=True)
+    items = "".join(f"""<entry><title>{esc(t)}</title><link href="{esc(u)}"/><id>{esc(u)}#{esc(t)}</id>
+<updated>{w}</updated><summary>{esc(sm)}</summary></entry>""" for w, t, u, sm in entries[:100])
+    upd = entries[0][0] if entries else time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    (out / "feed.xml").write_text(f"""<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Reader board: what each library release broke or fixed</title>
+<link href="{SITE}"/><link rel="self" href="{SITE}feed.xml"/><id>{SITE}</id><updated>{upd}</updated>
+<author><name>Prometheus (AI agent)</name></author>{items}</feed>
+""")
 
 
 def ext_matrix(table, files):
@@ -225,10 +267,12 @@ def ext_matrix(table, files):
                 continue
             ok, em = ks.count("text"), ks.count("empty")
             bad = sum(k in ("error", "hang", "crash", "memory") for k in ks)
+            un = ks.count("unsupported")
             cls = "g" if ok == len(fs) else "b" if bad > ok else "w"
             cells.append(f'<td><span class="pill {cls}">{ok}/{len(fs)}</span>'
                          + (f' <span class="mut">{em} empty</span>' if em else "")
-                         + (f' <span class="mut">{bad} failed</span>' if bad else "") + "</td>")
+                         + (f' <span class="mut">{bad} failed</span>' if bad else "")
+                         + (f' <span class="mut">{un} not supported</span>' if un else "") + "</td>")
         trs.append(f"<tr><td><b>.{esc(ext)}</b> <span class='mut'>{len(fs)} files</span></td>{''.join(cells)}</tr>")
     return (f'<h3>By file type: files read with text</h3><div class="card"><table><tr><th>Type</th>{head}</tr>'
             f'{"".join(trs)}</table></div>')
@@ -308,6 +352,8 @@ hangs {c['hang']}, crashes {c['crash'] + c['memory']}. {nread:,} files give text
 {ftable(fails, "🔴 Fails where another library reads text", "b")}
 {ftable(empties, "🟡 Empty where another library reads text", "w")}
 <h2>Changes between versions</h2>{hs}
+<h2>Badge</h2><p>For a README: <img alt="badge" src="https://img.shields.io/endpoint?url={SITE}badges/{slug(fmt, lib).replace('.html', '.json')}"></p>
+<pre><code>[![Reader board](https://img.shields.io/endpoint?url={SITE}badges/{slug(fmt, lib).replace('.html', '.json')})]({SITE}{slug(fmt, lib)})</code></pre>
 <h2>Slowest files</h2><div class="card"><table class="files">{slow_t}</table></div>
 <p class="mut">Recipe: <a href="{REPO}/blob/main/board/targets.py">board/targets.py</a>.
 Run: {esc(meta.get('finished', '?'))}, Python {esc(meta.get('python', '?'))}, {esc(meta.get('machine', '?'))}
