@@ -168,13 +168,15 @@ def build(out):
                 f'<td>{c["text"]}</td><td>{c["error"]}</td>'
                 f'<td>{"–" if c["median_ms"] is None else "&lt;1" if c["median_ms"] < 1 else round(c["median_ms"])}</td><td>{c["total_s"]:,}</td></tr>')
             write_lib_page(out, fmt, fcfg, commit, lib, ver, meta, rows, c, fails, empties, hist, len(readable))
-        sections.append(f"""<h2 id="{fmt}">{esc(fcfg['title'])}</h2>
+        names = ", ".join(t[0] for t in table)
+        sections.append((fmt, names, len(files), f"""<h2 id="{fmt}">{esc(fcfg['title'])}</h2>
 <div class="mut">{len(files):,} files from <a href="https://github.com/{'mozilla/pdf.js' if fcfg['corpus'] == 'pdfjs' else 'apache/poi'}/tree/{commit}" target="_blank" rel="noopener">{esc(CFG['corpora'][fcfg['corpus']]['title'])}</a>;
 {len(readable):,} of them give text to at least one library.</div>
 <div class="card"><table><tr><th>Library</th><th>🔴 Fails where<br>another reads</th><th>🟡 Empty where<br>another reads</th>
 <th>⏱ Hangs or<br>crashes</th><th>Text from<br>(all files)</th><th>Errors<br>(all files)</th><th>Median<br>ms/file</th><th>Total<br>seconds</th></tr>
-{''.join(trs)}</table></div>""")
+{''.join(trs)}</table></div>"""))
     built = time.strftime("%d %B %Y", time.gmtime())
+    method = method_html()
     body = f"""<h1>Reader board</h1>
 <p class="lead">Which Python library reads <b>PDF, Word, Excel and PowerPoint</b> files without breaking? Each one runs on
 {nfiles:,} odd real-world files from the test collections of pdf.js and Apache POI: files from bug reports, fuzzers and
@@ -182,8 +184,26 @@ broken exporters. Every new release on PyPI is tested again by itself.</p>
 <div class="mut">Updated {built}. Lower is better in the 🔴 🟡 ⏱ columns; the table is sorted by them. Click a library to
 see every file it failed on, with the error, and what changed between its versions.</div>
 <h2>🏆 Most robust per format</h2><div class="glance">{''.join(glance)}</div>
-{''.join(sections)}
-<h2>How this is measured</h2>
+{''.join(x[3] for x in sections)}
+{method}"""
+    (out / "index.html").write_text(page("Reader board: which Python library reads PDF, Word, Excel and PowerPoint files without breaking", body,
+                                         "Python PDF, docx, xlsx and pptx libraries tested on thousands of odd real-world files, re-tested on every release."))
+    for fmt, names, n, sec in sections:
+        title = CFG["formats"][fmt]["title"]
+        fbody = f"""<p class="mut"><a href="index.html">← Reader board: all formats</a></p>
+<h1>Which Python {esc(title)} library breaks least?</h1>
+<p class="lead">{esc(names)}: each one tested on the same {n:,} odd real-world {esc(title)} files from bug reports and fuzzers.
+New PyPI releases are tested again by themselves. Updated {built}.</p>
+{sec.replace(f'<h2 id="{fmt}">{esc(title)}</h2>', '', 1)}
+{method}"""
+        (out / f"{fmt}.html").write_text(page(f"Python {title} libraries compared on {n:,} broken and odd files: {names}", fbody,
+                                              f"Which Python {title} library fails least on real-world files? {names} tested on {n:,} files, re-tested on every release."))
+    (out / "summary.json").write_text(json.dumps(summary, indent=1))
+    (out / ".nojekyll").write_text("")
+
+
+def method_html():
+    return f"""<h2>How this is measured</h2>
 <ul>
 <li>Each library runs a short recipe from its own docs (<a href="{REPO}/blob/main/board/targets.py">board/targets.py</a>):
 open the file, get all text. Installed with the extras the docs recommend for reading
@@ -197,10 +217,6 @@ have every output's size and hash.</li>
 <li>Same files for every version: the test collections are pinned to one commit. GitHub-hosted runner, so times are
 comparable within one table, roughly.</li>
 </ul>"""
-    (out / "index.html").write_text(page("Reader board: which Python library reads PDF, Word, Excel and PowerPoint files without breaking", body,
-                                         "Python PDF, docx, xlsx and pptx libraries tested on thousands of odd real-world files, re-tested on every release."))
-    (out / "summary.json").write_text(json.dumps(summary, indent=1))
-    (out / ".nojekyll").write_text("")
 
 
 def write_lib_page(out, fmt, fcfg, commit, lib, ver, meta, rows, c, fails, empties, hist, nread):
@@ -223,7 +239,7 @@ def write_lib_page(out, fmt, fcfg, commit, lib, ver, meta, rows, c, fails, empti
     slow = sorted((r for r in rows.values() if r.get("ok")), key=lambda r: -r["s"])[:10]
     slow_t = "".join(f"<tr><td>{link(r['f'])}</td><td>{r['s']} s, {r.get('peak_mb', '?')} MB</td></tr>" for r in slow)
     installed = ", ".join(x for x in meta.get("installed", []) if not x.lower().startswith(("pip==", "setuptools")))
-    body = f"""<p class="mut"><a href="index.html#{fmt}">← Reader board</a></p>
+    body = f"""<p class="mut"><a href="{fmt}.html">← {esc(fcfg["title"])} libraries</a> · <a href="index.html">Reader board</a></p>
 <h1>{esc(lib)} <span class="ver">{esc(ver)}</span> on {esc(fcfg['title'])}</h1>
 <p class="lead">{c['files']:,} files: text from {c['text']:,}, empty {c['empty']:,}, errors {c['error']:,},
 hangs {c['hang']}, crashes {c['crash'] + c['memory']}. {nread:,} files give text to at least one library.</p>
