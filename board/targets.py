@@ -155,3 +155,71 @@ def unstructured_any(path):
 def kreuzberg_any(path):
     import kreuzberg
     return _no_raw({"text": kreuzberg.extract_file_sync(path).content})
+
+
+# --- OCR (images with a ground-truth file next to each: NAME.gt.txt) ---
+# Each engine's default recipe from its docs, English models, CPU. The score compares the text with the ground truth:
+#   cer         character error rate after whitespace is collapsed (0 = perfect; capped at 1)
+#   word_recall share of ground-truth words found anywhere in the output (ignores reading order)
+def _truth(path):
+    import os
+    base = os.path.splitext(path)[0]
+    with open(base + ".gt.txt", encoding="utf-8") as f:
+        return f.read()
+
+
+def _score(text, path):
+    import re
+    import unicodedata
+    from collections import Counter
+    from rapidfuzz.distance import Levenshtein
+
+    def norm(s):
+        return re.sub(r"\s+", " ", unicodedata.normalize("NFKC", s)).strip()
+
+    def words(s):
+        return Counter(w for w in re.findall(r"\w+", norm(s).lower()))
+
+    t, g = norm(text), norm(_truth(path))
+    cer = min(1.0, Levenshtein.distance(t, g) / max(1, len(g)))
+    gw, tw = words(g), words(t)
+    recall = sum((gw & tw).values()) / max(1, sum(gw.values()))
+    return {"text": text, "metrics": {"cer": round(cer, 4), "word_recall": round(recall, 4)}}
+
+
+def tesseract_ocr(path):
+    import pytesseract
+    from PIL import Image
+    return _score(pytesseract.image_to_string(Image.open(path)), path)
+
+
+def easyocr_ocr(path):
+    if "easyocr" not in _CACHE:
+        import easyocr
+        _CACHE["easyocr"] = easyocr.Reader(["en"], gpu=False, verbose=False)
+    return _score("\n".join(_CACHE["easyocr"].readtext(path, detail=0, paragraph=True)), path)
+
+
+def rapidocr_ocr(path):
+    if "rapidocr" not in _CACHE:
+        from rapidocr import RapidOCR
+        _CACHE["rapidocr"] = RapidOCR()
+    r = _CACHE["rapidocr"](path)
+    return _score("\n".join(r.txts or ()), path)
+
+
+def paddleocr_ocr(path):
+    if "paddleocr" not in _CACHE:
+        from paddleocr import PaddleOCR
+        _CACHE["paddleocr"] = PaddleOCR(lang="en", use_doc_orientation_classify=False, use_doc_unwarping=False,
+                                        use_textline_orientation=False)
+    res = _CACHE["paddleocr"].predict(path)
+    return _score("\n".join(t for r in res for t in r["rec_texts"]), path)
+
+
+def doctr_ocr(path):
+    if "doctr" not in _CACHE:
+        from doctr.models import ocr_predictor
+        _CACHE["doctr"] = ocr_predictor(pretrained=True)
+    from doctr.io import DocumentFile
+    return _score(_CACHE["doctr"](DocumentFile.from_images(path)).render(), path)

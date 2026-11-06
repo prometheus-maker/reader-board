@@ -71,9 +71,24 @@ def stats(rows, readable):
             empties.append(f)
     ok_s = [r["s"] for r in rows.values() if r.get("ok")]
     c["fail_readable"], c["empty_readable"] = len(fails), len(empties)
+    c.update(accuracy(rows))
     c["median_ms"] = round(1000 * statistics.median(ok_s), 1) if ok_s else None
     c["total_s"] = round(sum(r.get("s", 0) for r in rows.values()), 1)
     return c, sorted(fails), sorted(empties)
+
+
+def accuracy(rows):
+    """Mean of the per-file scores a scored recipe reports (OCR: word_recall, cer). A file that failed or came back
+    empty counts as the worst score (nothing found, every character wrong), so failing is never cheaper than guessing."""
+    if not any(r.get("metrics") for r in rows.values()):
+        return {}
+    rec = [r.get("metrics", {}).get("word_recall", 0.0) if kind(r) == "text" else 0.0 for r in rows.values()]
+    cer = [r.get("metrics", {}).get("cer", 1.0) if kind(r) == "text" else 1.0 for r in rows.values()]
+    return {"word_recall": round(sum(rec) / len(rec), 4), "cer": round(sum(cer) / len(cer), 4)}
+
+
+def pct(x):
+    return "–" if x is None else f"{100 * x:.1f}%"
 
 
 def changes(old, new):
@@ -155,12 +170,15 @@ def build(out):
                 broke, fixed = changes(r0, r1)
                 hist.append({"from": v0, "to": v1, "broke": broke, "fixed": fixed})
             table.append((lib, ver, meta, rows, c, fails, empties, hist))
-        if fcfg.get("per_ext"):  # tools cover different file types: most files turned into text wins
+        if fcfg.get("scored"):  # accuracy against ground truth: most words found wins
+            table.sort(key=lambda t: (-t[4].get("word_recall", 0), t[4].get("cer", 1), t[4]["total_s"]))
+        elif fcfg.get("per_ext"):  # tools cover different file types: most files turned into text wins
             table.sort(key=lambda t: (-t[4]["text"], t[4]["fail_readable"], t[4]["total_s"]))
         else:
             table.sort(key=lambda t: (t[4]["fail_readable"], t[4]["empty_readable"], t[4]["total_s"]))
         best = table[0]
-        what = (f'text from {best[4]["text"]:,} of {len(files):,} files' if fcfg.get("per_ext") else
+        what = (f'finds {pct(best[4].get("word_recall"))} of the words' if fcfg.get("scored") else
+                f'text from {best[4]["text"]:,} of {len(files):,} files' if fcfg.get("per_ext") else
                 f'fails on {best[4]["fail_readable"]} of {len(readable):,} readable files')
         glance.append(f'<a class="g1" href="#{fmt}"><span class="mut">{esc(fcfg["title"])}</span>'
                       f'<b>{esc(best[0])}</b><span class="mut">{what}</span></a>')
@@ -184,6 +202,7 @@ def build(out):
                 f'<td>{pill(killed, "b")}</td>'
                 f'<td>{c["text"]}</td><td>{c["error"]}</td>'
                 + (f'<td>{c["unsupported"]}</td>' if fcfg.get("per_ext") else "")
+                + (f'<td><b>{pct(c.get("word_recall"))}</b></td><td>{pct(c.get("cer"))}</td>' if fcfg.get("scored") else "")
                 + f'<td>{"–" if c["median_ms"] is None else "&lt;1" if c["median_ms"] < 1 else round(c["median_ms"])}</td><td>{c["total_s"]:,}</td></tr>')
             write_lib_page(out, fmt, fcfg, commit, lib, ver, meta, rows, c, fails, empties, hist, len(readable))
         names = ", ".join(t[0] for t in table)
@@ -191,8 +210,8 @@ def build(out):
 <div class="mut">{len(files):,} files from <a href="https://github.com/{CFG['corpora'][fcfg['corpus']]['repo']}/tree/{commit}" target="_blank" rel="noopener">{esc(CFG['corpora'][fcfg['corpus']]['title'])}</a>;
 {len(readable):,} of them give text to at least one library.</div>
 <div class="card"><table><tr><th>Library</th><th>🔴 Fails where<br>another reads</th><th>🟡 Empty where<br>another reads</th>
-<th>⏱ Hangs or<br>crashes</th><th>Text from<br>(all files)</th><th>Errors<br>(all files)</th>{'<th>Format not<br>supported</th>' if fcfg.get('per_ext') else ''}<th>Median<br>ms/file</th><th>Total<br>seconds</th></tr>
-{''.join(trs)}</table></div>{ext_matrix(table, files) if fcfg.get('per_ext') else ''}"""))
+<th>⏱ Hangs or<br>crashes</th><th>Text from<br>(all files)</th><th>Errors<br>(all files)</th>{'<th>Format not<br>supported</th>' if fcfg.get('per_ext') else ''}{'<th>✅ Words<br>found</th><th>Character<br>errors</th>' if fcfg.get('scored') else ''}<th>Median<br>ms/file</th><th>Total<br>seconds</th></tr>
+{''.join(trs)}</table></div>{ext_matrix(table, files) if fcfg.get('per_ext') else ''}{group_matrix(table, files) if fcfg.get('scored') else ''}"""))
     built = time.strftime("%d %B %Y", time.gmtime())
     method = method_html()
     vs = write_vs_pages(out, runs)
@@ -215,7 +234,7 @@ New releases as they are tested: <a href="feed.xml">Atom feed</a>.</div>
         title = CFG["formats"][fmt]["title"]
         fbody = f"""<p class="mut"><a href="index.html">← Reader board: all formats</a></p>
 <h1>{esc(CFG["formats"][fmt].get("question") or f"Which Python {title} library breaks least?")}</h1>
-<p class="lead">{esc(names)}: each one tested on the same {n:,} odd real-world {esc(title if not CFG["formats"][fmt].get("per_ext") else "")} files from bug reports and fuzzers.
+<p class="lead">{esc(names)}: each one tested on the same {n:,} {esc(CFG["formats"][fmt].get("lead") or f'odd real-world {title if not CFG["formats"][fmt].get("per_ext") else ""} files from bug reports and fuzzers')}.
 New PyPI releases are tested again by themselves. Updated {built}.</p>
 {sec.replace(f'<h2 id="{fmt}">{esc(title)}</h2>', '', 1)}
 {method}"""
@@ -270,12 +289,16 @@ def write_vs_pages(out, runs):
         fa = sum(ka[f] in bad for f in only_b)  # a breaks where b reads
         fb = sum(kb[f] in bad for f in only_a)
         ta, tb = ca["text"], cb["text"]
+        if fcfg.get("scored"):  # accuracy, not "any text", decides
+            ta, tb = ca.get("word_recall", 0), cb.get("word_recall", 0)
         more = a if ta > tb else b if tb > ta else None
         sa, sb = ca["total_s"], cb["total_s"]
         fast, slow_, fs, ss = (a, b, sa, sb) if sa <= sb else (b, a, sb, sa)
         ratio = f"{ss / fs:,.0f}× faster" if fs > 0 and ss / fs >= 1.5 else "about as fast"
-        verdict = (f"<b>{esc(more)}</b> got text from more files: {max(ta, tb):,} vs {min(ta, tb):,} of {len(files):,}."
-                   if more else f"Both got text from {ta:,} of {len(files):,} files.")
+        fv = pct if fcfg.get("scored") else (lambda x: f"{x:,}")
+        won = "found more of the words" if fcfg.get("scored") else "got text from more files"
+        verdict = (f"<b>{esc(more)}</b> {won}: {fv(max(ta, tb))} vs {fv(min(ta, tb))}{'' if fcfg.get('scored') else f' of {len(files):,}'}."
+                   if more else f"Tie: {fv(ta)} for both.")
         repo = CFG["corpora"][fcfg["corpus"]]["repo"]
 
         def link(f):
@@ -306,6 +329,7 @@ def write_vs_pages(out, runs):
             f"<td>{pill(bucket(o, lambda f, kk=kk: kk[f] == 'empty'), 'w')}</td>"
             f"<td>{c['hang'] + c['crash'] + c['memory']}</td>"
             + (f"<td>{c['unsupported']}</td>" if fcfg.get("per_ext") else "")
+            + (f"<td><b>{pct(c.get('word_recall'))}</b></td><td>{pct(c.get('cer'))}</td>" if fcfg.get("scored") else "")
             + f"<td>{'–' if c['median_ms'] is None else '&lt;1' if c['median_ms'] < 1 else round(c['median_ms'])}</td><td>{c['total_s']:,}</td></tr>"
             for n, v, c, o, kk in ((a, va, ca, only_b, ka), (b, vb, cb, only_a, kb)))
         table = [(a, va, ma, {f: ra[f] for f in files}), (b, vb, mb, {f: rb[f] for f in files})]
@@ -315,12 +339,12 @@ def write_vs_pages(out, runs):
 <p class="lead">{esc(a)} {esc(va)} and {esc(b)} {esc(vb)} on the same {len(files):,} odd real-world files from
 <a href="https://github.com/{repo}/tree/{commit}" target="_blank" rel="noopener">{esc(CFG['corpora'][fcfg['corpus']]['title'])}</a>
 (bug reports, fuzzers, broken exporters). Measured, not opinion; re-tested by itself on every new PyPI release. Updated {built}.</p>
-<div class="glance"><div class="g1"><span class="mut">More files read</span><b>{esc(more or 'tie')}</b><span class="mut">{max(ta, tb):,} vs {min(ta, tb):,}</span></div>
+<div class="glance"><div class="g1"><span class="mut">{'More words found' if fcfg.get('scored') else 'More files read'}</span><b>{esc(more or 'tie')}</b><span class="mut">{fv(max(ta, tb))} vs {fv(min(ta, tb))}</span></div>
 <div class="g1"><span class="mut">Faster on this set</span><b>{esc(fast)}</b><span class="mut">{fs:,} s vs {ss:,} s total ({ratio})</span></div>
 <div class="g1"><span class="mut">Both read</span><b>{len(both):,}</b><span class="mut">only {esc(a)}: {len(only_a)} · only {esc(b)}: {len(only_b)}</span></div></div>
 <p>{verdict} {esc(a)} broke (error, hang or crash) on {fa} files that {esc(b)} read; {esc(b)} broke on {fb} files that {esc(a)} read.</p>
-<div class="card"><table><tr><th>Library</th><th>Text from</th><th>🔴 Fails where<br>the other reads</th><th>🟡 Empty where<br>the other reads</th><th>⏱ Hangs or<br>crashes</th>{'<th>Format not<br>supported</th>' if fcfg.get('per_ext') else ''}<th>Median<br>ms/file</th><th>Total<br>seconds</th></tr>{rows_t}</table></div>
-{ext_matrix(table, files) if fcfg.get('per_ext') else ''}
+<div class="card"><table><tr><th>Library</th><th>Text from</th><th>🔴 Fails where<br>the other reads</th><th>🟡 Empty where<br>the other reads</th><th>⏱ Hangs or<br>crashes</th>{'<th>Format not<br>supported</th>' if fcfg.get('per_ext') else ''}{'<th>✅ Words<br>found</th><th>Character<br>errors</th>' if fcfg.get('scored') else ''}<th>Median<br>ms/file</th><th>Total<br>seconds</th></tr>{rows_t}</table></div>
+{ext_matrix(table, files) if fcfg.get('per_ext') else ''}{group_matrix(table, files) if fcfg.get('scored') else ''}
 <h2>Files only {esc(a)} reads ({len(only_a)})</h2>{flist(only_a, rb, b)}
 <h2>Files only {esc(b)} reads ({len(only_b)})</h2>{flist(only_b, ra, a)}
 <h2>What this does not tell you</h2>
@@ -374,6 +398,25 @@ def write_feed(out, runs):
 """)
 
 
+def group_matrix(table, files):
+    """Scored formats: words found per folder of the test set (documents, receipts, screenshots, photos...)."""
+    groups = {}
+    for f in files:
+        groups.setdefault(f.split("/", 1)[0] if "/" in f else "other", []).append(f)
+    head = "".join(f"<th>{esc(t[0])}</th>" for t in table)
+    trs = []
+    for g, fs in sorted(groups.items()):
+        cells = []
+        for t in table:
+            a = accuracy({f: t[3][f] for f in fs if f in t[3]})
+            v = a.get("word_recall")
+            cls = "g" if v is not None and v >= 0.9 else "w" if v is not None and v >= 0.7 else "b"
+            cells.append(f'<td><span class="pill {cls}">{pct(v)}</span> <span class="mut">CER {pct(a.get("cer"))}</span></td>')
+        trs.append(f"<tr><td><b>{esc(g)}</b> <span class='mut'>{len(fs)} images</span></td>{''.join(cells)}</tr>")
+    return (f'<h3>By kind of image: words found (and character errors)</h3><div class="card"><table><tr><th>Images</th>{head}</tr>'
+            f'{"".join(trs)}</table></div>')
+
+
 def ext_matrix(table, files):
     """One row per file type: how many files each library read (green), returned empty (yellow), failed on (red)."""
     exts = {}
@@ -415,7 +458,11 @@ in the same table got text. Files that every library fails on (encrypted, trunca
 counts as "not supported", not as a failure (lists in <a href="{REPO}/blob/main/board/libs.json">board/libs.json</a>).
 Returning a file's raw RTF source counts as empty, for every tool. Each tool runs with default settings: no OCR
 switched on by hand.</li>
-<li>Text <i>quality</i> (order, tables, layout) is not ranked here; this board is about not breaking. The raw results
+<li><b>OCR</b>: each image comes with the human-written ground-truth text published with its dataset. <b>Words found</b> is the share of its words
+that appear anywhere in the engine's output (reading order doesn't matter); <b>character errors</b> is the edit distance
+after collapsing whitespace, divided by the length of the truth. An image that fails or comes back empty counts as 0 words
+found and 100% errors. English models, CPU, default settings.</li>
+<li>Text <i>quality</i> (order, tables, layout) is not ranked in the other tables; they are about not breaking. The raw results
 have every output's size and hash.</li>
 <li>Same files for every version: the test collections are pinned to one commit. GitHub-hosted runner, so times are
 comparable within one table, roughly.</li>
