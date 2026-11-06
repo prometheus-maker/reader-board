@@ -197,7 +197,7 @@ def build(out):
             killed = c["hang"] + c["crash"] + c["memory"]
             trs.append(
                 f'<tr><td><span class="rank">{i}</span> <a class="lib" href="{slug(fmt, lib)}">{esc(lib)}</a> '
-                f'<span class="ver">{esc(ver)}</span>{note}</td>'
+                f'<span class="ver">{esc(ver)}{" (" + esc(meta["engine"]) + ")" if meta.get("engine") else ""}</span>{note}</td>'
                 f'<td>{pill(c["fail_readable"], "b")}</td><td>{pill(c["empty_readable"], "w")}</td>'
                 f'<td>{pill(killed, "b")}</td>'
                 f'<td>{c["text"]}</td><td>{c["error"]}</td>'
