@@ -78,14 +78,34 @@ def stats(rows, readable, scored=False):
     return c, sorted(fails), sorted(empties)
 
 
+WORST = {"word_recall": 0.0, "cer": 1.0, "wer": 1.0}  # score of a file that failed or came back empty
+
+
 def accuracy(rows):
-    """Mean of the per-file scores a scored recipe reports (OCR: word_recall, cer). A file that failed or came back
-    empty counts as the worst score (nothing found, every character wrong), so failing is never cheaper than guessing."""
+    """Mean of the per-file scores a scored recipe reports (OCR: word_recall, cer; speech: wer, word_recall). A file
+    that failed or came back empty counts as the worst score, so failing is never cheaper than guessing."""
     if not rows:
         return {}
-    rec = [r.get("metrics", {}).get("word_recall", 0.0) if kind(r) == "text" else 0.0 for r in rows.values()]
-    cer = [r.get("metrics", {}).get("cer", 1.0) if kind(r) == "text" else 1.0 for r in rows.values()]
-    return {"word_recall": round(sum(rec) / len(rec), 4), "cer": round(sum(cer) / len(cer), 4)}
+    keys = {k for r in rows.values() for k in r.get("metrics", {})} | {"word_recall", "cer"}
+    out = {}
+    for k in sorted(keys):
+        w = WORST.get(k, 0.0)
+        vals = [r.get("metrics", {}).get(k, w) if kind(r) == "text" else w for r in rows.values()]
+        out[k] = round(sum(vals) / len(vals), 4)
+    return out
+
+
+def score(fcfg):
+    """How a scored format ranks: libs.json "score" (default: share of ground-truth words found, higher is better)."""
+    d = {"key": "word_recall", "lower": False, "th": "✅ Words<br>found", "card": "More words found",
+         "won": "found more of the words", "what": "finds {v} of the words", "head": "words found"}
+    d.update(fcfg.get("score", {}))
+    return d
+
+
+def better(fcfg, x, y):
+    """True if score value x beats y for this format."""
+    return x < y if score(fcfg)["lower"] else x > y
 
 
 def pct(x):
@@ -172,13 +192,14 @@ def build(out):
                 hist.append({"from": v0, "to": v1, "broke": broke, "fixed": fixed})
             table.append((lib, ver, meta, rows, c, fails, empties, hist))
         if fcfg.get("scored"):  # accuracy against ground truth: most words found wins
-            table.sort(key=lambda t: (-t[4].get("word_recall", 0), t[4].get("cer", 1), t[4]["total_s"]))
+            sc = score(fcfg)
+            table.sort(key=lambda t: ((1 if sc["lower"] else -1) * t[4].get(sc["key"], WORST.get(sc["key"], 0)), t[4]["total_s"]))
         elif fcfg.get("per_ext"):  # tools cover different file types: most files turned into text wins
             table.sort(key=lambda t: (-t[4]["text"], t[4]["fail_readable"], t[4]["total_s"]))
         else:
             table.sort(key=lambda t: (t[4]["fail_readable"], t[4]["empty_readable"], t[4]["total_s"]))
         best = table[0]
-        what = (f'finds {pct(best[4].get("word_recall"))} of the words' if fcfg.get("scored") else
+        what = (score(fcfg)["what"].format(v=pct(best[4].get(score(fcfg)["key"]))) if fcfg.get("scored") else
                 f'text from {best[4]["text"]:,} of {len(files):,} files' if fcfg.get("per_ext") else
                 f'fails on {best[4]["fail_readable"]} of {len(readable):,} readable files')
         glance.append(f'<a class="g1" href="#{fmt}"><span class="mut">{esc(fcfg["title"])}</span>'
@@ -203,7 +224,7 @@ def build(out):
                 f'<td>{pill(killed, "b")}</td>'
                 f'<td>{c["text"]}</td><td>{c["error"]}</td>'
                 + (f'<td>{c["unsupported"]}</td>' if fcfg.get("per_ext") else "")
-                + (f'<td><b>{pct(c.get("word_recall"))}</b></td>' if fcfg.get("scored") else "")
+                + (f'<td><b>{pct(c.get(score(fcfg)["key"]))}</b></td>' if fcfg.get("scored") else "")
                 + f'<td>{"–" if c["median_ms"] is None else "&lt;1" if c["median_ms"] < 1 else round(c["median_ms"])}</td><td>{c["total_s"]:,}</td></tr>')
             write_lib_page(out, fmt, fcfg, commit, lib, ver, meta, rows, c, fails, empties, hist, len(readable))
         names = ", ".join(t[0] for t in table)
@@ -211,8 +232,8 @@ def build(out):
 <div class="mut">{len(files):,} files from <a href="https://github.com/{CFG['corpora'][fcfg['corpus']]['repo']}/tree/{commit}" target="_blank" rel="noopener">{esc(CFG['corpora'][fcfg['corpus']]['title'])}</a>;
 {len(readable):,} of them give text to at least one library.</div>
 <div class="card"><table><tr><th>Library</th><th>🔴 Fails where<br>another reads</th><th>🟡 Empty where<br>another reads</th>
-<th>⏱ Hangs or<br>crashes</th><th>Text from<br>(all files)</th><th>Errors<br>(all files)</th>{'<th>Format not<br>supported</th>' if fcfg.get('per_ext') else ''}{'<th>✅ Words<br>found</th>' if fcfg.get('scored') else ''}<th>Median<br>ms/file</th><th>Total<br>seconds</th></tr>
-{''.join(trs)}</table></div>{ext_matrix(table, files) if fcfg.get('per_ext') else ''}{group_matrix(table, files) if fcfg.get('scored') else ''}"""))
+<th>⏱ Hangs or<br>crashes</th><th>Text from<br>(all files)</th><th>Errors<br>(all files)</th>{'<th>Format not<br>supported</th>' if fcfg.get('per_ext') else ''}{'<th>' + score(fcfg)['th'] + '</th>' if fcfg.get('scored') else ''}<th>Median<br>ms/file</th><th>Total<br>seconds</th></tr>
+{''.join(trs)}</table></div>{ext_matrix(table, files) if fcfg.get('per_ext') else ''}{group_matrix(table, files, fcfg) if fcfg.get('scored') else ''}"""))
     built = time.strftime("%d %B %Y", time.gmtime())
     method = method_html()
     vs = write_vs_pages(out, runs)
@@ -301,14 +322,17 @@ def write_vs_pages(out, runs):
         fb = sum(kb[f] in bad for f in only_a)
         ta, tb = ca["text"], cb["text"]
         if fcfg.get("scored"):  # accuracy, not "any text", decides
-            ta, tb = ca.get("word_recall", 0), cb.get("word_recall", 0)
-        more = a if ta > tb else b if tb > ta else None
+            k = score(fcfg)["key"]
+            ta, tb = ca.get(k, WORST.get(k, 0)), cb.get(k, WORST.get(k, 0))
+        more = (a if better(fcfg, ta, tb) else b if better(fcfg, tb, ta) else None) if fcfg.get("scored") else \
+            (a if ta > tb else b if tb > ta else None)
+        hi, lo = ((ta, tb) if more in (a, None) else (tb, ta))  # winner's value first
         sa, sb = ca["total_s"], cb["total_s"]
         fast, slow_, fs, ss = (a, b, sa, sb) if sa <= sb else (b, a, sb, sa)
         ratio = f"{ss / fs:,.0f}× faster" if fs > 0 and ss / fs >= 1.5 else "about as fast"
         fv = pct if fcfg.get("scored") else (lambda x: f"{x:,}")
-        won = "found more of the words" if fcfg.get("scored") else "got text from more files"
-        verdict = (f"<b>{esc(more)}</b> {won}: {fv(max(ta, tb))} vs {fv(min(ta, tb))}{'' if fcfg.get('scored') else f' of {len(files):,}'}."
+        won = score(fcfg)["won"] if fcfg.get("scored") else "got text from more files"
+        verdict = (f"<b>{esc(more)}</b> {won}: {fv(hi)} vs {fv(lo)}{'' if fcfg.get('scored') else f' of {len(files):,}'}."
                    if more else f"Tie: {fv(ta)} for both.")
         repo = CFG["corpora"][fcfg["corpus"]]["repo"]
 
@@ -340,7 +364,7 @@ def write_vs_pages(out, runs):
             f"<td>{pill(bucket(o, lambda f, kk=kk: kk[f] == 'empty'), 'w')}</td>"
             f"<td>{c['hang'] + c['crash'] + c['memory']}</td>"
             + (f"<td>{c['unsupported']}</td>" if fcfg.get("per_ext") else "")
-            + (f"<td><b>{pct(c.get('word_recall'))}</b></td>" if fcfg.get("scored") else "")
+            + (f"<td><b>{pct(c.get(score(fcfg)['key']))}</b></td>" if fcfg.get("scored") else "")
             + f"<td>{'–' if c['median_ms'] is None else '&lt;1' if c['median_ms'] < 1 else round(c['median_ms'])}</td><td>{c['total_s']:,}</td></tr>"
             for n, v, c, o, kk in ((a, va, ca, only_b, ka), (b, vb, cb, only_a, kb)))
         table = [(a, va, ma, {f: ra[f] for f in files}), (b, vb, mb, {f: rb[f] for f in files})]
@@ -350,12 +374,12 @@ def write_vs_pages(out, runs):
 <p class="lead">{esc(a)} {esc(va)} and {esc(b)} {esc(vb)} on the same {len(files):,} {esc(fcfg.get('lead') or 'odd real-world files')} from
 <a href="https://github.com/{repo}/tree/{commit}" target="_blank" rel="noopener">{esc(CFG['corpora'][fcfg['corpus']]['title'])}</a>{'' if fcfg.get('lead') else ' (bug reports, fuzzers, broken exporters)'}.
 Measured, not opinion; re-tested by itself on every new PyPI release. Updated {built}.</p>
-<div class="glance"><div class="g1"><span class="mut">{'More words found' if fcfg.get('scored') else 'More files read'}</span><b>{esc(more or 'tie')}</b><span class="mut">{fv(max(ta, tb))} vs {fv(min(ta, tb))}</span></div>
+<div class="glance"><div class="g1"><span class="mut">{score(fcfg)['card'] if fcfg.get('scored') else 'More files read'}</span><b>{esc(more or 'tie')}</b><span class="mut">{fv(hi)} vs {fv(lo)}</span></div>
 <div class="g1"><span class="mut">Faster on this set</span><b>{esc(fast)}</b><span class="mut">{fs:,} s vs {ss:,} s total ({ratio})</span></div>
 <div class="g1"><span class="mut">Both read</span><b>{len(both):,}</b><span class="mut">only {esc(a)}: {len(only_a)} · only {esc(b)}: {len(only_b)}</span></div></div>
 <p>{verdict} {esc(a)} broke (error, hang or crash) on {fa} files that {esc(b)} read; {esc(b)} broke on {fb} files that {esc(a)} read.</p>
-<div class="card"><table><tr><th>Library</th><th>Text from</th><th>🔴 Fails where<br>the other reads</th><th>🟡 Empty where<br>the other reads</th><th>⏱ Hangs or<br>crashes</th>{'<th>Format not<br>supported</th>' if fcfg.get('per_ext') else ''}{'<th>✅ Words<br>found</th>' if fcfg.get('scored') else ''}<th>Median<br>ms/file</th><th>Total<br>seconds</th></tr>{rows_t}</table></div>
-{ext_matrix(table, files) if fcfg.get('per_ext') else ''}{group_matrix(table, files) if fcfg.get('scored') else ''}
+<div class="card"><table><tr><th>Library</th><th>Text from</th><th>🔴 Fails where<br>the other reads</th><th>🟡 Empty where<br>the other reads</th><th>⏱ Hangs or<br>crashes</th>{'<th>Format not<br>supported</th>' if fcfg.get('per_ext') else ''}{'<th>' + score(fcfg)['th'] + '</th>' if fcfg.get('scored') else ''}<th>Median<br>ms/file</th><th>Total<br>seconds</th></tr>{rows_t}</table></div>
+{ext_matrix(table, files) if fcfg.get('per_ext') else ''}{group_matrix(table, files, fcfg) if fcfg.get('scored') else ''}
 <h2>Files only {esc(a)} reads ({len(only_a)})</h2>{flist(only_a, rb, b)}
 <h2>Files only {esc(b)} reads ({len(only_b)})</h2>{flist(only_b, ra, a)}
 <h2>What this does not tell you</h2>
@@ -412,7 +436,7 @@ def write_feed(out, runs):
 """)
 
 
-def group_matrix(table, files):
+def group_matrix(table, files, fcfg):
     """Scored formats: words found per folder of the test set (documents, receipts, screenshots, photos...)."""
     groups = {}
     for f in files:
@@ -423,11 +447,13 @@ def group_matrix(table, files):
         cells = []
         for t in table:
             a = accuracy({f: t[3][f] for f in fs if f in t[3]})
-            v = a.get("word_recall")
-            cls = "g" if v is not None and v >= 0.9 else "w" if v is not None and v >= 0.7 else "b"
+            sc = score(fcfg)
+            v = a.get(sc["key"])
+            good, ok = (0.1, 0.25) if sc["lower"] else (0.9, 0.7)
+            cls = "b" if v is None else ("g" if better(fcfg, v, good) or v == good else "w" if better(fcfg, v, ok) or v == ok else "b")
             cells.append(f'<td><span class="pill {cls}">{pct(v)}</span></td>')
-        trs.append(f"<tr><td><b>{esc(g)}</b> <span class='mut'>{len(fs)} images</span></td>{''.join(cells)}</tr>")
-    return (f'<h3>By kind of image: words found</h3><div class="card"><table><tr><th>Images</th>{head}</tr>'
+        trs.append(f"<tr><td><b>{esc(g)}</b> <span class='mut'>{len(fs)} {esc(fcfg.get('noun', 'files'))}</span></td>{''.join(cells)}</tr>")
+    return (f'<h3>By kind of {esc(fcfg.get("noun", "files").rstrip("s"))}: {esc(score(fcfg)["head"])}</h3><div class="card"><table><tr><th>{esc(fcfg.get("noun", "files").capitalize())}</th>{head}</tr>'
             f'{"".join(trs)}</table></div>')
 
 
