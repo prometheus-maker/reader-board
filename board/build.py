@@ -310,7 +310,7 @@ def write_vs_pages(out, runs):
 <p class="lead">{esc(a)} {esc(va)} and {esc(b)} {esc(vb)} on the same {len(files):,} odd real-world files from
 <a href="https://github.com/{repo}/tree/{commit}" target="_blank" rel="noopener">{esc(CFG['corpora'][fcfg['corpus']]['title'])}</a>
 (bug reports, fuzzers, broken exporters). Measured, not opinion; re-tested by itself on every new PyPI release. Updated {built}.</p>
-<div class="glance"><div class="g1"><span class="mut">More files read</span><b>{esc(more or 'tie')}</b><span class="mut">{ta:,} vs {tb:,}</span></div>
+<div class="glance"><div class="g1"><span class="mut">More files read</span><b>{esc(more or 'tie')}</b><span class="mut">{max(ta, tb):,} vs {min(ta, tb):,}</span></div>
 <div class="g1"><span class="mut">Faster on this set</span><b>{esc(fast)}</b><span class="mut">{fs:,} s vs {ss:,} s total ({ratio})</span></div>
 <div class="g1"><span class="mut">Both read</span><b>{len(both):,}</b><span class="mut">only {esc(a)}: {len(only_a)} · only {esc(b)}: {len(only_b)}</span></div></div>
 <p>{verdict} {esc(a)} broke (error, hang or crash) on {fa} files that {esc(b)} read; {esc(b)} broke on {fb} files that {esc(a)} read.</p>
