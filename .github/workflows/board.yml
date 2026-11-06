@@ -60,6 +60,9 @@ jobs:
       - name: System packages
         if: matrix.apt != ''
         run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends ${{ matrix.apt }}
+      - name: Setup (tools a library's docs say to install separately)
+        if: matrix.setup != ''
+        run: ${{ matrix.setup }}
       - name: Install
         run: |
           python -m venv /tmp/tool && /tmp/tool/bin/pip install -q "$CORPUSDIFF"

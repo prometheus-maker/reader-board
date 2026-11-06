@@ -43,7 +43,7 @@ def main():
                 "corpus": f["corpus"], "commit": CFG["corpora"][f["corpus"]]["commit"], "ext": f["ext"],
                 "apt": lib.get("apt", ""), "jobs": lib.get("jobs", 4), "timeout": f.get("timeout", 60),
                 "mem_mb": f.get("mem_mb", 3000), "warmup": f.get("warmup", ""),
-                "files": CFG["corpora"][f["corpus"]].get("files", ""),
+                "files": CFG["corpora"][f["corpus"]].get("files", ""), "setup": lib.get("setup", ""),
             })
     print(json.dumps({"include": todo}))
 
