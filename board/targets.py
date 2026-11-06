@@ -241,7 +241,9 @@ def _asr_score(text, path):
     hyp, ref = norm(text).split(), norm(_truth(path)).split()
     wer = min(1.0, Levenshtein.distance(hyp, ref) / max(1, len(ref)))
     recall = sum((Counter(ref) & Counter(hyp)).values()) / max(1, len(ref))
-    return {"text": text, "metrics": {"wer": round(wer, 4), "word_recall": round(recall, 4)}}
+    errors = Levenshtein.distance(hyp, ref)
+    return {"text": text, "metrics": {"wer": round(wer, 4), "word_recall": round(recall, 4),
+                                      "errors": errors, "ref_words": len(ref)}}
 
 
 def whisper_asr(path):

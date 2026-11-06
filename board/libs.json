@@ -89,7 +89,7 @@
    "vs_question": "which one makes fewer word errors?",
    "lead": "English clips with reference transcripts: audiobooks, read sentences, meetings (headset and table microphone) and earnings calls, 14.9 minutes",
    "score": {
-    "key": "wer",
+    "key": "wer_corpus",
     "lower": true,
     "th": "✅ Word error<br>rate",
     "card": "Fewer word errors",

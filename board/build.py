@@ -78,20 +78,37 @@ def stats(rows, readable, scored=False):
     return c, sorted(fails), sorted(empties)
 
 
-WORST = {"word_recall": 0.0, "cer": 1.0, "wer": 1.0}  # score of a file that failed or came back empty
+WORST = {"word_recall": 0.0, "cer": 1.0, "wer": 1.0, "wer_corpus": 1.0}  # score of a file that failed or came back empty
+
+
+REF_WORDS = {}  # file -> reference word count, from any library that read it (for corpus-level WER)
 
 
 def accuracy(rows):
     """Mean of the per-file scores a scored recipe reports (OCR: word_recall, cer; speech: wer, word_recall). A file
-    that failed or came back empty counts as the worst score, so failing is never cheaper than guessing."""
+    that failed or came back empty counts as the worst score, so failing is never cheaper than guessing.
+    Speech also gets "wer_corpus": all word errors / all reference words (the usual way to report WER), where a
+    failed or empty file counts every one of its reference words as an error."""
     if not rows:
         return {}
     keys = {k for r in rows.values() for k in r.get("metrics", {})} | {"word_recall", "cer"}
+    keys -= {"errors", "ref_words"}
     out = {}
     for k in sorted(keys):
         w = WORST.get(k, 0.0)
         vals = [r.get("metrics", {}).get(k, w) if kind(r) == "text" else w for r in rows.values()]
         out[k] = round(sum(vals) / len(vals), 4)
+    if any("ref_words" in r.get("metrics", {}) for r in rows.values()) or "wer" in keys:
+        err = den = 0
+        for f, r in rows.items():
+            n = REF_WORDS.get(f)
+            if n is None:
+                continue
+            m = r.get("metrics", {})
+            err += m["errors"] if kind(r) == "text" and "errors" in m else n
+            den += n
+        if den:
+            out["wer_corpus"] = round(err / den, 4)
     return out
 
 
@@ -180,6 +197,10 @@ def build(out):
             continue
         commit = CFG["corpora"][fcfg["corpus"]]["commit"]
         latest = {lib: lst[-1] for lib, lst in libs.items()}
+        for _, _, rows in latest.values():
+            for f, r in rows.items():
+                if "ref_words" in r.get("metrics", {}):
+                    REF_WORDS[f] = r["metrics"]["ref_words"]
         files = set().union(*(set(rows) for _, _, rows in latest.values()))
         readable = {f for f in files if any(kind(rows.get(f)) == "text" for _, _, rows in latest.values())}
         table = []
