@@ -59,7 +59,7 @@ def why(r):
     return f"{r.get('etype')}: {r.get('msg', '')}"[:160]
 
 
-def stats(rows, readable):
+def stats(rows, readable, scored=False):
     c = {"files": len(rows), "text": 0, "empty": 0, "error": 0, "hang": 0, "crash": 0, "memory": 0, "unsupported": 0}
     fails, empties = [], []
     for f, r in rows.items():
@@ -71,7 +71,8 @@ def stats(rows, readable):
             empties.append(f)
     ok_s = [r["s"] for r in rows.values() if r.get("ok")]
     c["fail_readable"], c["empty_readable"] = len(fails), len(empties)
-    c.update(accuracy(rows))
+    if scored:
+        c.update(accuracy(rows))
     c["median_ms"] = round(1000 * statistics.median(ok_s), 1) if ok_s else None
     c["total_s"] = round(sum(r.get("s", 0) for r in rows.values()), 1)
     return c, sorted(fails), sorted(empties)
@@ -80,7 +81,7 @@ def stats(rows, readable):
 def accuracy(rows):
     """Mean of the per-file scores a scored recipe reports (OCR: word_recall, cer). A file that failed or came back
     empty counts as the worst score (nothing found, every character wrong), so failing is never cheaper than guessing."""
-    if not any(r.get("metrics") for r in rows.values()):
+    if not rows:
         return {}
     rec = [r.get("metrics", {}).get("word_recall", 0.0) if kind(r) == "text" else 0.0 for r in rows.values()]
     cer = [r.get("metrics", {}).get("cer", 1.0) if kind(r) == "text" else 1.0 for r in rows.values()]
@@ -163,7 +164,7 @@ def build(out):
         readable = {f for f in files if any(kind(rows.get(f)) == "text" for _, _, rows in latest.values())}
         table = []
         for lib, (ver, meta, rows) in latest.items():
-            c, fails, empties = stats(rows, readable)
+            c, fails, empties = stats(rows, readable, fcfg.get("scored"))
             hist = []
             lst = libs[lib]
             for (v0, _, r0), (v1, _, r1) in zip(lst, lst[1:]):
@@ -202,7 +203,7 @@ def build(out):
                 f'<td>{pill(killed, "b")}</td>'
                 f'<td>{c["text"]}</td><td>{c["error"]}</td>'
                 + (f'<td>{c["unsupported"]}</td>' if fcfg.get("per_ext") else "")
-                + (f'<td><b>{pct(c.get("word_recall"))}</b></td><td>{pct(c.get("cer"))}</td>' if fcfg.get("scored") else "")
+                + (f'<td><b>{pct(c.get("word_recall"))}</b></td>' if fcfg.get("scored") else "")
                 + f'<td>{"–" if c["median_ms"] is None else "&lt;1" if c["median_ms"] < 1 else round(c["median_ms"])}</td><td>{c["total_s"]:,}</td></tr>')
             write_lib_page(out, fmt, fcfg, commit, lib, ver, meta, rows, c, fails, empties, hist, len(readable))
         names = ", ".join(t[0] for t in table)
@@ -210,7 +211,7 @@ def build(out):
 <div class="mut">{len(files):,} files from <a href="https://github.com/{CFG['corpora'][fcfg['corpus']]['repo']}/tree/{commit}" target="_blank" rel="noopener">{esc(CFG['corpora'][fcfg['corpus']]['title'])}</a>;
 {len(readable):,} of them give text to at least one library.</div>
 <div class="card"><table><tr><th>Library</th><th>🔴 Fails where<br>another reads</th><th>🟡 Empty where<br>another reads</th>
-<th>⏱ Hangs or<br>crashes</th><th>Text from<br>(all files)</th><th>Errors<br>(all files)</th>{'<th>Format not<br>supported</th>' if fcfg.get('per_ext') else ''}{'<th>✅ Words<br>found</th><th>Character<br>errors</th>' if fcfg.get('scored') else ''}<th>Median<br>ms/file</th><th>Total<br>seconds</th></tr>
+<th>⏱ Hangs or<br>crashes</th><th>Text from<br>(all files)</th><th>Errors<br>(all files)</th>{'<th>Format not<br>supported</th>' if fcfg.get('per_ext') else ''}{'<th>✅ Words<br>found</th>' if fcfg.get('scored') else ''}<th>Median<br>ms/file</th><th>Total<br>seconds</th></tr>
 {''.join(trs)}</table></div>{ext_matrix(table, files) if fcfg.get('per_ext') else ''}{group_matrix(table, files) if fcfg.get('scored') else ''}"""))
     built = time.strftime("%d %B %Y", time.gmtime())
     method = method_html()
@@ -263,7 +264,7 @@ def lib_note(fmt, lib):
     if not l.get("note"):
         return ""
     link = f' <a href="{esc(l["note_url"])}" target="_blank" rel="noopener">why</a>' if l.get("note_url") else ""
-    return f'<div class="chg mut" style="white-space:normal;max-width:360px">ⓘ {esc(l["note"])}{link}</div>'
+    return f'<div class="chg mut" style="white-space:normal;max-width:360px">Note: {esc(l["note"])}{link}</div>'
 
 
 def vs_links(fmt, lib):
@@ -294,8 +295,8 @@ def write_vs_pages(out, runs):
         both = [f for f in files if ka[f] == "text" and kb[f] == "text"]
         only_a = [f for f in files if ka[f] == "text" and kb[f] != "text"]
         only_b = [f for f in files if kb[f] == "text" and ka[f] != "text"]
-        ca, _, _ = stats({f: ra[f] for f in files}, set())
-        cb, _, _ = stats({f: rb[f] for f in files}, set())
+        ca, _, _ = stats({f: ra[f] for f in files}, set(), fcfg.get("scored"))
+        cb, _, _ = stats({f: rb[f] for f in files}, set(), fcfg.get("scored"))
         fa = sum(ka[f] in bad for f in only_b)  # a breaks where b reads
         fb = sum(kb[f] in bad for f in only_a)
         ta, tb = ca["text"], cb["text"]
@@ -339,7 +340,7 @@ def write_vs_pages(out, runs):
             f"<td>{pill(bucket(o, lambda f, kk=kk: kk[f] == 'empty'), 'w')}</td>"
             f"<td>{c['hang'] + c['crash'] + c['memory']}</td>"
             + (f"<td>{c['unsupported']}</td>" if fcfg.get("per_ext") else "")
-            + (f"<td><b>{pct(c.get('word_recall'))}</b></td><td>{pct(c.get('cer'))}</td>" if fcfg.get("scored") else "")
+            + (f"<td><b>{pct(c.get('word_recall'))}</b></td>" if fcfg.get("scored") else "")
             + f"<td>{'–' if c['median_ms'] is None else '&lt;1' if c['median_ms'] < 1 else round(c['median_ms'])}</td><td>{c['total_s']:,}</td></tr>"
             for n, v, c, o, kk in ((a, va, ca, only_b, ka), (b, vb, cb, only_a, kb)))
         table = [(a, va, ma, {f: ra[f] for f in files}), (b, vb, mb, {f: rb[f] for f in files})]
@@ -353,7 +354,7 @@ Measured, not opinion; re-tested by itself on every new PyPI release. Updated {b
 <div class="g1"><span class="mut">Faster on this set</span><b>{esc(fast)}</b><span class="mut">{fs:,} s vs {ss:,} s total ({ratio})</span></div>
 <div class="g1"><span class="mut">Both read</span><b>{len(both):,}</b><span class="mut">only {esc(a)}: {len(only_a)} · only {esc(b)}: {len(only_b)}</span></div></div>
 <p>{verdict} {esc(a)} broke (error, hang or crash) on {fa} files that {esc(b)} read; {esc(b)} broke on {fb} files that {esc(a)} read.</p>
-<div class="card"><table><tr><th>Library</th><th>Text from</th><th>🔴 Fails where<br>the other reads</th><th>🟡 Empty where<br>the other reads</th><th>⏱ Hangs or<br>crashes</th>{'<th>Format not<br>supported</th>' if fcfg.get('per_ext') else ''}{'<th>✅ Words<br>found</th><th>Character<br>errors</th>' if fcfg.get('scored') else ''}<th>Median<br>ms/file</th><th>Total<br>seconds</th></tr>{rows_t}</table></div>
+<div class="card"><table><tr><th>Library</th><th>Text from</th><th>🔴 Fails where<br>the other reads</th><th>🟡 Empty where<br>the other reads</th><th>⏱ Hangs or<br>crashes</th>{'<th>Format not<br>supported</th>' if fcfg.get('per_ext') else ''}{'<th>✅ Words<br>found</th>' if fcfg.get('scored') else ''}<th>Median<br>ms/file</th><th>Total<br>seconds</th></tr>{rows_t}</table></div>
 {ext_matrix(table, files) if fcfg.get('per_ext') else ''}{group_matrix(table, files) if fcfg.get('scored') else ''}
 <h2>Files only {esc(a)} reads ({len(only_a)})</h2>{flist(only_a, rb, b)}
 <h2>Files only {esc(b)} reads ({len(only_b)})</h2>{flist(only_b, ra, a)}
@@ -424,9 +425,9 @@ def group_matrix(table, files):
             a = accuracy({f: t[3][f] for f in fs if f in t[3]})
             v = a.get("word_recall")
             cls = "g" if v is not None and v >= 0.9 else "w" if v is not None and v >= 0.7 else "b"
-            cells.append(f'<td><span class="pill {cls}">{pct(v)}</span> <span class="mut">CER {pct(a.get("cer"))}</span></td>')
+            cells.append(f'<td><span class="pill {cls}">{pct(v)}</span></td>')
         trs.append(f"<tr><td><b>{esc(g)}</b> <span class='mut'>{len(fs)} images</span></td>{''.join(cells)}</tr>")
-    return (f'<h3>By kind of image: words found (and character errors)</h3><div class="card"><table><tr><th>Images</th>{head}</tr>'
+    return (f'<h3>By kind of image: words found</h3><div class="card"><table><tr><th>Images</th>{head}</tr>'
             f'{"".join(trs)}</table></div>')
 
 
@@ -472,9 +473,9 @@ counts as "not supported", not as a failure (lists in <a href="{REPO}/blob/main/
 Returning a file's raw RTF source counts as empty, for every tool. Each tool runs with default settings: no OCR
 switched on by hand.</li>
 <li><b>OCR</b>: each image comes with the human-written ground-truth text published with its dataset. <b>Words found</b> is the share of its words
-that appear anywhere in the engine's output (reading order doesn't matter); <b>character errors</b> is the edit distance
-after collapsing whitespace, divided by the length of the truth. An image that fails or comes back empty counts as 0 words
-found and 100% errors. English models, CPU, default settings.</li>
+that appear anywhere in the engine's output (reading order doesn't matter); an image that fails or comes back empty counts as 0. The ground truth of
+receipts and document pages covers only their annotated text, so a character error rate would punish engines for reading
+more than was annotated; it is in the raw results but not ranked. English models, CPU, default settings.</li>
 <li>Text <i>quality</i> (order, tables, layout) is not ranked in the other tables; they are about not breaking. The raw results
 have every output's size and hash.</li>
 <li>Same files for every version: the test collections are pinned to one commit. GitHub-hosted runner, so times are
