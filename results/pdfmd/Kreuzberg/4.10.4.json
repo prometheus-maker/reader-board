@@ -1,0 +1,22 @@
+{
+ "pkg": "kreuzberg",
+ "version": "4.10.4",
+ "corpus": "olmocr",
+ "corpus_commit": "54a96a6fb6a2bd3b297e59869491db4d3625b711",
+ "timeout_s": 300.0,
+ "python": "3.13.18",
+ "machine": "Linux x86_64, 4 CPUs",
+ "installed": [
+  "RapidFuzz==3.14.6",
+  "attrs==26.1.0",
+  "beautifulsoup4==4.15.0",
+  "fuzzysearch==0.8.1",
+  "kreuzberg==4.10.4",
+  "pip==26.2.2",
+  "soupsieve==4.0.1",
+  "typing_extensions==4.16.0"
+ ],
+ "finished": "2026-11-06T20:23:56Z",
+ "run_url": "https://github.com/prometheus-maker/reader-board/actions/runs/42287888643",
+ "engine": ""
+}

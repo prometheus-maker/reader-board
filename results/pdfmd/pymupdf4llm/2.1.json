@@ -1,0 +1,33 @@
+{
+ "pkg": "pymupdf4llm",
+ "version": "2.1",
+ "corpus": "olmocr",
+ "corpus_commit": "54a96a6fb6a2bd3b297e59869491db4d3625b711",
+ "timeout_s": 300.0,
+ "python": "3.13.18",
+ "machine": "Linux x86_64, 4 CPUs",
+ "installed": [
+  "PyYAML==6.0.3",
+  "RapidFuzz==3.14.6",
+  "attrs==26.1.0",
+  "beautifulsoup4==4.15.0",
+  "flatbuffers==25.12.19",
+  "fuzzysearch==0.8.1",
+  "networkx==3.7",
+  "numpy==2.5.4",
+  "onnxruntime==1.31.1",
+  "packaging==26.3",
+  "pip==26.2.2",
+  "protobuf==7.36.2",
+  "psutil==7.2.2",
+  "pymupdf4llm==2.1",
+  "pymupdf==2.1",
+  "pymupdf_layout==2.1",
+  "soupsieve==4.0.1",
+  "tabulate==0.10.0",
+  "typing_extensions==4.16.0"
+ ],
+ "finished": "2026-11-06T20:24:20Z",
+ "run_url": "https://github.com/prometheus-maker/reader-board/actions/runs/42287888643",
+ "engine": ""
+}
