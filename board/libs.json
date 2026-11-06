@@ -512,7 +512,8 @@
    "fn": "pymupdf4llm_md",
    "extra": [],
    "also": ["beautifulsoup4", "fuzzysearch", "rapidfuzz"],
-   "jobs": 4
+   "jobs": 4,
+   "apt": "tesseract-ocr tesseract-ocr-eng"
   },
   {
    "id": "markitdown",
