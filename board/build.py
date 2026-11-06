@@ -3,13 +3,14 @@
 For each format, the latest version of every library is compared on the same files. A file counts as *readable*
 when at least one library returned text from it. A library is ranked by how often it fails on readable files
 (error, hang or crash): those are failures another library shows to be avoidable."""
-import gzip, html, json, statistics, sys, time
+import gzip, html, json, re, statistics, sys, time, urllib.request, os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 CFG = json.loads((ROOT / "board/libs.json").read_text())
 REPO = "https://github.com/prometheus-maker/reader-board"
 KILLED = {"TIMEOUT": "hang", "CRASH": "crash", "MEMORY": "memory"}
+UNSUP = {(l["fmt"], l["id"]): re.compile(l["unsupported"]) for l in CFG["libs"] if l.get("unsupported")}
 
 
 def vkey(v):
@@ -27,6 +28,9 @@ def load_runs():
         with gzip.open(gz, "rt") as f:
             for line in f:
                 r = json.loads(line)
+                rx = UNSUP.get((fmt, lib))
+                if rx and not r.get("ok") and rx.search(f"{r.get('etype')}: {r.get('msg', '')}"):
+                    r["unsupported"] = True  # the library says it doesn't handle this format: not a failure
                 rows[r["f"]] = r
         runs.setdefault(fmt, {}).setdefault(lib, []).append((ver, meta, rows))
     for libs in runs.values():
@@ -40,6 +44,8 @@ def kind(r):
         return "missing"
     if r.get("ok"):
         return "empty" if r.get("empty") else "text"
+    if r.get("unsupported"):
+        return "unsupported"
     return KILLED.get(r.get("etype"), "error")
 
 
@@ -50,7 +56,7 @@ def why(r):
 
 
 def stats(rows, readable):
-    c = {"files": len(rows), "text": 0, "empty": 0, "error": 0, "hang": 0, "crash": 0, "memory": 0}
+    c = {"files": len(rows), "text": 0, "empty": 0, "error": 0, "hang": 0, "crash": 0, "memory": 0, "unsupported": 0}
     fails, empties = [], []
     for f, r in rows.items():
         k = kind(r)
@@ -166,15 +172,16 @@ def build(out):
                 f'<td>{pill(c["fail_readable"], "b")}</td><td>{pill(c["empty_readable"], "w")}</td>'
                 f'<td>{pill(killed, "b")}</td>'
                 f'<td>{c["text"]}</td><td>{c["error"]}</td>'
-                f'<td>{"–" if c["median_ms"] is None else "&lt;1" if c["median_ms"] < 1 else round(c["median_ms"])}</td><td>{c["total_s"]:,}</td></tr>')
+                + (f'<td>{c["unsupported"]}</td>' if fcfg.get("per_ext") else "")
+                + f'<td>{"–" if c["median_ms"] is None else "&lt;1" if c["median_ms"] < 1 else round(c["median_ms"])}</td><td>{c["total_s"]:,}</td></tr>')
             write_lib_page(out, fmt, fcfg, commit, lib, ver, meta, rows, c, fails, empties, hist, len(readable))
         names = ", ".join(t[0] for t in table)
         sections.append((fmt, names, len(files), f"""<h2 id="{fmt}">{esc(fcfg['title'])}</h2>
-<div class="mut">{len(files):,} files from <a href="https://github.com/{'mozilla/pdf.js' if fcfg['corpus'] == 'pdfjs' else 'apache/poi'}/tree/{commit}" target="_blank" rel="noopener">{esc(CFG['corpora'][fcfg['corpus']]['title'])}</a>;
+<div class="mut">{len(files):,} files from <a href="https://github.com/{CFG['corpora'][fcfg['corpus']]['repo']}/tree/{commit}" target="_blank" rel="noopener">{esc(CFG['corpora'][fcfg['corpus']]['title'])}</a>;
 {len(readable):,} of them give text to at least one library.</div>
 <div class="card"><table><tr><th>Library</th><th>🔴 Fails where<br>another reads</th><th>🟡 Empty where<br>another reads</th>
-<th>⏱ Hangs or<br>crashes</th><th>Text from<br>(all files)</th><th>Errors<br>(all files)</th><th>Median<br>ms/file</th><th>Total<br>seconds</th></tr>
-{''.join(trs)}</table></div>"""))
+<th>⏱ Hangs or<br>crashes</th><th>Text from<br>(all files)</th><th>Errors<br>(all files)</th>{'<th>Format not<br>supported</th>' if fcfg.get('per_ext') else ''}<th>Median<br>ms/file</th><th>Total<br>seconds</th></tr>
+{''.join(trs)}</table></div>{ext_matrix(table, files) if fcfg.get('per_ext') else ''}"""))
     built = time.strftime("%d %B %Y", time.gmtime())
     method = method_html()
     body = f"""<h1>Reader board</h1>
@@ -202,6 +209,31 @@ New PyPI releases are tested again by themselves. Updated {built}.</p>
     (out / ".nojekyll").write_text("")
 
 
+def ext_matrix(table, files):
+    """One row per file type: how many files each library read (green), returned empty (yellow), failed on (red)."""
+    exts = {}
+    for f in files:
+        exts.setdefault(f.rsplit(".", 1)[-1].lower(), []).append(f)
+    head = "".join(f"<th>{esc(t[0])}</th>" for t in table)
+    trs = []
+    for ext, fs in sorted(exts.items(), key=lambda kv: (-len(kv[1]), kv[0])):
+        cells = []
+        for t in table:
+            ks = [kind(t[3].get(f)) for f in fs]
+            if all(k == "unsupported" for k in ks):
+                cells.append('<td class="z">not supported</td>')
+                continue
+            ok, em = ks.count("text"), ks.count("empty")
+            bad = sum(k in ("error", "hang", "crash", "memory") for k in ks)
+            cls = "g" if ok == len(fs) else "b" if bad > ok else "w"
+            cells.append(f'<td><span class="pill {cls}">{ok}/{len(fs)}</span>'
+                         + (f' <span class="mut">{em} empty</span>' if em else "")
+                         + (f' <span class="mut">{bad} failed</span>' if bad else "") + "</td>")
+        trs.append(f"<tr><td><b>.{esc(ext)}</b> <span class='mut'>{len(fs)} files</span></td>{''.join(cells)}</tr>")
+    return (f'<h3>By file type: files read with text</h3><div class="card"><table><tr><th>Type</th>{head}</tr>'
+            f'{"".join(trs)}</table></div>')
+
+
 def method_html():
     return f"""<h2>How this is measured</h2>
 <ul>
@@ -219,9 +251,39 @@ comparable within one table, roughly.</li>
 </ul>"""
 
 
+_TREES = {}
+
+
+def tree_paths(repo, commit, marker="/src/test/resources/test-documents/"):
+    """Local corpus path (module/rest, as corpusdiff stores Tika files) -> path in the repo."""
+    if (repo, commit) not in _TREES:
+        h = {"User-Agent": "reader-board"}
+        if os.environ.get("GITHUB_TOKEN"):
+            h["Authorization"] = "Bearer " + os.environ["GITHUB_TOKEN"]
+        try:
+            url = f"https://api.github.com/repos/{repo}/git/trees/{commit}?recursive=1"
+            tree = json.load(urllib.request.urlopen(urllib.request.Request(url, headers=h), timeout=60))["tree"]
+        except Exception:  # noqa: BLE001 - links fall back to the repo root
+            tree = []
+        m = {}
+        for t in tree:
+            head, sep, rest = t["path"].partition(marker)
+            if sep and rest:
+                m[f"{head.rsplit('/', 1)[-1]}/{rest}"] = t["path"]
+        _TREES[(repo, commit)] = m
+    return _TREES[(repo, commit)]
+
+
 def write_lib_page(out, fmt, fcfg, commit, lib, ver, meta, rows, c, fails, empties, hist, nread):
+    repo = CFG["corpora"][fcfg["corpus"]]["repo"]
+
     def link(f):
-        return f'<a href="{esc(fcfg["blob"].format(commit=commit, path=f))}" target="_blank" rel="noopener">{esc(f)}</a>'
+        if "{treepath}" in fcfg["blob"]:
+            tp = tree_paths(repo, commit).get(f)
+            url = fcfg["blob"].format(commit=commit, treepath=tp) if tp else f"https://github.com/{repo}/tree/{commit}"
+        else:
+            url = fcfg["blob"].format(commit=commit, path=f)
+        return f'<a href="{esc(url)}" target="_blank" rel="noopener">{esc(f)}</a>'
 
     def ftable(fs, title, cls):
         if not fs:

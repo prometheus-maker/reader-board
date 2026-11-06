@@ -2,11 +2,18 @@
  "corpora": {
   "pdfjs": {
    "commit": "50d130738a150d43669c9554909020661ded5997",
-   "title": "Mozilla pdf.js test PDFs"
+   "title": "Mozilla pdf.js test PDFs",
+   "repo": "mozilla/pdf.js"
   },
   "poi": {
    "commit": "39edce935ef8ed746b4457062ecfa2670eabe49f",
-   "title": "Apache POI test files"
+   "title": "Apache POI test files",
+   "repo": "apache/poi"
+  },
+  "tika": {
+   "commit": "52aaa53b3ff94677757ff326b669f05c57357240",
+   "title": "Apache Tika test documents",
+   "repo": "apache/tika"
   }
  },
  "formats": {
@@ -33,6 +40,15 @@
    "ext": "pptx",
    "blob": "https://github.com/apache/poi/blob/{commit}/test-data/slideshow/{path}",
    "title": "PowerPoint (.pptx)"
+  },
+  "docs": {
+   "corpus": "tika",
+   "ext": "pdf,docx,doc,rtf,odt,html,htm,xhtml,xlsx,xls,ods,pptx,ppt,odp,eml,msg,epub,txt,csv,md,json",
+   "title": "Any document → text (for AI / RAG)",
+   "blob": "https://github.com/apache/tika/blob/{commit}/{treepath}",
+   "timeout": 180,
+   "per_ext": true,
+   "mem_mb": 6000
   }
  },
  "libs": [
@@ -150,6 +166,46 @@
    "extra": [
     "markitdown[pptx]"
    ]
+  },
+  {
+   "id": "markitdown",
+   "fmt": "docs",
+   "pkg": "markitdown",
+   "fn": "markitdown_any",
+   "extra": [
+    "markitdown[all]"
+   ],
+   "unsupported": "UnsupportedFormatException"
+  },
+  {
+   "id": "Docling",
+   "fmt": "docs",
+   "pkg": "docling",
+   "fn": "docling_any",
+   "extra": [],
+   "jobs": 2,
+   "unsupported": "(?i)format not allowed|not supported|FormatNotAllowed|File format"
+  },
+  {
+   "id": "Unstructured",
+   "fmt": "docs",
+   "pkg": "unstructured",
+   "fn": "unstructured_any",
+   "extra": [
+    "unstructured[all-docs]"
+   ],
+   "jobs": 2,
+   "apt": "libmagic1 poppler-utils tesseract-ocr libreoffice-core libreoffice-writer libreoffice-calc libreoffice-impress pandoc",
+   "unsupported": "(?i)UnsupportedFileFormatError|is not supported|Invalid file"
+  },
+  {
+   "id": "Kreuzberg",
+   "fmt": "docs",
+   "pkg": "kreuzberg",
+   "fn": "kreuzberg_any",
+   "extra": [],
+   "apt": "tesseract-ocr tesseract-ocr-eng",
+   "unsupported": "^ValidationError: [a-z]+/[-+.\\\\w]+$"
   }
  ]
 }

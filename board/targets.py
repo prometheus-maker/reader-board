@@ -122,3 +122,28 @@ def python_pptx_text(path):
             if shape.has_text_frame:
                 out.append(shape.text_frame.text)
     return {"slides": len(prs.slides), "text": "\n".join(out)}
+
+
+# --- any document (RAG ingestion tools), default settings; one converter per worker process ---
+_CACHE = {}
+
+
+def markitdown_any(path):
+    return markitdown_text(path)
+
+
+def docling_any(path):
+    if "docling" not in _CACHE:
+        from docling.document_converter import DocumentConverter
+        _CACHE["docling"] = DocumentConverter()
+    return {"text": _CACHE["docling"].convert(path).document.export_to_markdown()}
+
+
+def unstructured_any(path):
+    from unstructured.partition.auto import partition
+    return {"text": "\n\n".join(str(e) for e in partition(filename=path))}
+
+
+def kreuzberg_any(path):
+    import kreuzberg
+    return {"text": kreuzberg.extract_file_sync(path).content}

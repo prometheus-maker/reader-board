@@ -20,7 +20,6 @@ permissions:
 concurrency: board
 env:
   CORPUSDIFF: git+https://github.com/prometheus-maker/corpusdiff@e5b5579a24313461b7dbed23d2cba17ca21ccd65
-  TIMEOUT: "60"
 jobs:
   plan:
     runs-on: ubuntu-latest
@@ -41,7 +40,7 @@ jobs:
     needs: plan
     if: needs.plan.outputs.count != '0'
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 300
     strategy:
       fail-fast: false
       max-parallel: 8
@@ -54,6 +53,9 @@ jobs:
         with:
           path: corpora/${{ matrix.corpus }}
           key: corpus-${{ matrix.corpus }}-${{ matrix.commit }}
+      - name: System packages
+        if: matrix.apt != ''
+        run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends ${{ matrix.apt }}
       - name: Install
         run: |
           python -m venv /tmp/tool && /tmp/tool/bin/pip install -q "$CORPUSDIFF"
@@ -65,12 +67,13 @@ jobs:
         run: |
           d="results/${{ matrix.fmt }}/${{ matrix.lib }}"; mkdir -p "$d" out
           /tmp/tool/bin/corpusdiff run board/targets.py:${{ matrix.fn }} corpora/${{ matrix.corpus }} \
-            --ext ${{ matrix.ext }} --python /tmp/lib/bin/python -j 4 -t "$TIMEOUT" --mem-mb 3000 -q -o out/run.jsonl
+            --ext ${{ matrix.ext }} --python /tmp/lib/bin/python -j ${{ matrix.jobs }} -t ${{ matrix.timeout }} --mem-mb ${{ matrix.mem_mb }} \
+            --start-timeout 900 -q -o out/run.jsonl
           /tmp/tool/bin/corpusdiff summary out/run.jsonl | tee -a "$GITHUB_STEP_SUMMARY"
           gzip -9 -c out/run.jsonl > "$d/${{ matrix.version }}.jsonl.gz"
           RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             /tmp/lib/bin/python board/meta.py "$d/${{ matrix.version }}.json" ${{ matrix.pkg }} ${{ matrix.version }} \
-            ${{ matrix.corpus }} ${{ matrix.commit }} "$TIMEOUT"
+            ${{ matrix.corpus }} ${{ matrix.commit }} ${{ matrix.timeout }}
       - uses: actions/upload-artifact@v4
         with:
           name: r-${{ matrix.fmt }}-${{ matrix.lib }}-${{ matrix.version }}
@@ -95,6 +98,7 @@ jobs:
           git pull -q --rebase origin main   # code may have changed while the runs ran
           git push
       - name: Build page
+        env: { GITHUB_TOKEN: "${{ github.token }}" }
         run: python3 board/build.py site
       - uses: actions/upload-pages-artifact@v3
         with: { path: site }

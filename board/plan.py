@@ -37,6 +37,8 @@ def main():
                 "fmt": lib["fmt"], "lib": lib["id"], "pkg": lib["pkg"], "version": v, "fn": lib["fn"],
                 "install": " ".join(f"{e}=={v}" for e in (lib["extra"] or [lib["pkg"]])),
                 "corpus": f["corpus"], "commit": CFG["corpora"][f["corpus"]]["commit"], "ext": f["ext"],
+                "apt": lib.get("apt", ""), "jobs": lib.get("jobs", 4), "timeout": f.get("timeout", 60),
+                "mem_mb": f.get("mem_mb", 3000),
             })
     print(json.dumps({"include": todo}))
 
