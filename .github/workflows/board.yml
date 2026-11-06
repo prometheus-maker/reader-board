@@ -9,6 +9,10 @@ on:
         description: "Run every library again (not just new releases)"
         type: boolean
         default: false
+      history:
+        description: "Also test this many releases back (1 = latest only)"
+        type: string
+        default: "1"
 permissions:
   contents: write
   pages: write
@@ -27,7 +31,7 @@ jobs:
       - uses: actions/checkout@v4
       - id: plan
         run: |
-          m=$(python3 board/plan.py ${{ inputs.all && '--all' || '' }})
+          m=$(python3 board/plan.py ${{ inputs.all && '--all' || '' }} --history ${{ inputs.history || '1' }})
           echo "matrix=$m" >> "$GITHUB_OUTPUT"
           echo "count=$(echo "$m" | python3 -c 'import json,sys;print(len(json.load(sys.stdin)["include"]))')" >> "$GITHUB_OUTPUT"
           echo "$m" | python3 -m json.tool
@@ -69,7 +73,7 @@ jobs:
             ${{ matrix.corpus }} ${{ matrix.commit }} "$TIMEOUT"
       - uses: actions/upload-artifact@v4
         with:
-          name: r-${{ matrix.fmt }}-${{ matrix.lib }}
+          name: r-${{ matrix.fmt }}-${{ matrix.lib }}-${{ matrix.version }}
           path: results/
 
   publish:
