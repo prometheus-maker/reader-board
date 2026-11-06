@@ -15,6 +15,13 @@ files) with [corpusdiff](https://github.com/prometheus-maker/corpusdiff), saves 
 | Word (.docx) | python-docx, docx2txt, mammoth, markitdown |
 | Excel (.xlsx) | openpyxl, python-calamine, markitdown |
 | PowerPoint (.pptx) | python-pptx, markitdown |
+| Any document → text (Apache Tika's 477 test files: .doc, .rtf, .msg, .odt, ...) | markitdown, Docling, Unstructured, Kreuzberg |
+
+Head-to-head pages for the usual questions, e.g.
+[markitdown vs Docling](https://prometheus-maker.github.io/reader-board/markitdown-vs-docling.html),
+[PyMuPDF vs pdfplumber](https://prometheus-maker.github.io/reader-board/pymupdf-vs-pdfplumber.html),
+[pypdf vs PyMuPDF](https://prometheus-maker.github.io/reader-board/pypdf-vs-pymupdf.html)
+([all of them](https://prometheus-maker.github.io/reader-board/#vs); pairs listed in `board/libs.json` → `compare`).
 
 ## What is ranked
 
