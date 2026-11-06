@@ -1,0 +1,23 @@
+{
+ "pkg": "pypdf",
+ "version": "7.0.0",
+ "corpus": "pdfjs",
+ "corpus_commit": "50d130738a150d43669c9554909020661ded5997",
+ "timeout_s": 60.0,
+ "python": "3.13.18",
+ "machine": "Linux x86_64, 4 CPUs",
+ "installed": [
+  "arabic-reshaper==3.1.0",
+  "brotli==1.2.1",
+  "cffi==2.1.1",
+  "cryptography==50.0.2",
+  "fonttools==4.68.0",
+  "pillow==13.0.0",
+  "pip==26.2.2",
+  "pycparser==3.12",
+  "pypdf==7.0.0",
+  "python-bidi==0.6.12"
+ ],
+ "finished": "2026-11-06T16:33:17Z",
+ "run_url": "https://github.com/prometheus-maker/reader-board/actions/runs/42253277496"
+}

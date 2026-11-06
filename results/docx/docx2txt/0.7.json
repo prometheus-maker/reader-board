@@ -1,0 +1,15 @@
+{
+ "pkg": "docx2txt",
+ "version": "0.7",
+ "corpus": "poi",
+ "corpus_commit": "39edce935ef8ed746b4457062ecfa2670eabe49f",
+ "timeout_s": 60.0,
+ "python": "3.13.18",
+ "machine": "Linux x86_64, 4 CPUs",
+ "installed": [
+  "docx2txt==0.7",
+  "pip==26.2.2"
+ ],
+ "finished": "2026-11-06T16:35:02Z",
+ "run_url": "https://github.com/prometheus-maker/reader-board/actions/runs/42253277496"
+}
