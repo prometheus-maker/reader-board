@@ -73,6 +73,7 @@
   "nvidia-nvjitlink==13.5.37",
   "nvidia-nvshmem-cu13==3.7.2",
   "nvidia-nvtx==13.2.86",
+  "odfdo==3.27.3",
   "olefile==0.47",
   "omegaconf==2.4.0",
   "opencv-python-headless==5.0.0.93",
@@ -131,6 +132,6 @@
   "websockets==17.4",
   "xlsxwriter==3.3.1"
  ],
- "finished": "2026-11-06T17:00:36Z",
- "run_url": "https://github.com/prometheus-maker/reader-board/actions/runs/42255921885"
+ "finished": "2026-11-06T17:14:23Z",
+ "run_url": "https://github.com/prometheus-maker/reader-board/actions/runs/42258717288"
 }
