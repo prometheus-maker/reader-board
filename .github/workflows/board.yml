@@ -23,7 +23,7 @@ permissions:
   id-token: write
 concurrency: board
 env:
-  CORPUSDIFF: git+https://github.com/prometheus-maker/corpusdiff@2b98d0701f1440d57b6ab4d41b2de145d6b9c1aa
+  CORPUSDIFF: git+https://github.com/prometheus-maker/corpusdiff@2e80e50beb391a2a69d7b358307a65b5c9ea2a9f
 jobs:
   plan:
     runs-on: ubuntu-latest
@@ -69,7 +69,7 @@ jobs:
         run: /tmp/tool/bin/corpusdiff fetch ${{ matrix.corpus }} corpora/${{ matrix.corpus }} --ref ${{ matrix.commit }}
       - name: Warm up (model downloads don't count against the first file's time limit)
         if: matrix.warmup
-        run: /tmp/lib/bin/python -c "import sys; sys.path.insert(0, 'board'); import targets; print(targets.${{ matrix.fn }}('board/warmup.png')['metrics'])" || true
+        run: /tmp/lib/bin/python -c "import sys; sys.path.insert(0, 'board'); import targets; print(targets.${{ matrix.fn }}('${{ matrix.warmup }}')['metrics'])" || true
       - name: Run
         run: |
           d="results/${{ matrix.fmt }}/${{ matrix.lib }}"; mkdir -p "$d" out

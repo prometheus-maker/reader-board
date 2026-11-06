@@ -219,7 +219,7 @@ def build(out):
             killed = c["hang"] + c["crash"] + c["memory"]
             trs.append(
                 f'<tr><td><span class="rank">{i}</span> <a class="lib" href="{slug(fmt, lib)}">{esc(lib)}</a> '
-                f'<span class="ver">{esc(ver)}{" (" + esc(meta["engine"]) + ")" if meta.get("engine") else ""}</span>{note}{lib_note(fmt, lib)}</td>'
+                f'<span class="ver">{esc(ver)}{" (" + esc(meta["engine"]) + ")" if meta.get("engine") else ""}{lib_model(fmt, lib)}</span>{note}{lib_note(fmt, lib)}</td>'
                 f'<td>{pill(c["fail_readable"], "b")}</td><td>{pill(c["empty_readable"], "w")}</td>'
                 f'<td>{pill(killed, "b")}</td>'
                 f'<td>{c["text"]}</td><td>{c["error"]}</td>'
@@ -277,6 +277,12 @@ def write_sitemap(out, sections, vs):
                     and p.stem not in {x[0] for x in sections})]
     (out / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
                                      + "".join(f"<url><loc>{SITE}{u}</loc><lastmod>{day}</lastmod></url>\n" for u in urls) + "</urlset>\n")
+
+
+def lib_model(fmt, lib):
+    """The model an engine ran with (libs.json "model"), shown next to its version."""
+    m = next((x.get("model") for x in CFG["libs"] if x["fmt"] == fmt and x["id"] == lib), None)
+    return f" · model {esc(m)}" if m else ""
 
 
 def lib_note(fmt, lib):

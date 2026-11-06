@@ -19,6 +19,11 @@
    "commit": "df02f9339f2450cf26bb825ba23648c8e3c6152d",
    "title": "OCR test set (CORD receipts, DocLayNet pages, app screenshots)",
    "repo": "prometheus-maker/ocr-testset"
+  },
+  "speech": {
+   "commit": "a1bf660226106cf7fe0553cd9466034032d321c0",
+   "title": "Speech test set (LibriSpeech, FLEURS, AMI meetings, Earnings-22 calls)",
+   "repo": "prometheus-maker/speech-testset"
   }
  },
  "formats": {
@@ -67,7 +72,31 @@
    "question": "Which Python OCR engine reads the most words correctly?",
    "lead": "real-world images with known text: 80 receipt photos, 50 document pages and 60 app screenshots",
    "noun": "images",
-   "vs_question": "which OCR engine reads more words correctly?"
+   "vs_question": "which OCR engine reads more words correctly?",
+   "warmup": "board/warmup.png"
+  },
+  "speech": {
+   "corpus": "speech",
+   "ext": "wav",
+   "title": "Speech to text (English)",
+   "blob": "https://github.com/prometheus-maker/speech-testset/blob/{commit}/{path}",
+   "scored": true,
+   "timeout": 300,
+   "mem_mb": 6000,
+   "noun": "clips",
+   "warmup": "board/warmup-speech.wav",
+   "question": "Which offline speech-to-text engine for Python makes the fewest mistakes?",
+   "vs_question": "which one makes fewer word errors?",
+   "lead": "English clips with reference transcripts: audiobooks, read sentences, meetings (headset and table microphone) and earnings calls, 14.9 minutes",
+   "score": {
+    "key": "wer",
+    "lower": true,
+    "th": "✅ Word error<br>rate",
+    "card": "Fewer word errors",
+    "won": "made fewer word errors",
+    "what": "word error rate {v}",
+    "head": "word error rate"
+   }
   }
  },
  "libs": [
@@ -325,6 +354,91 @@
     "--extra-index-url https://download.pytorch.org/whl/cpu"
    ],
    "jobs": 1
+  },
+  {
+   "id": "Whisper",
+   "fmt": "speech",
+   "pkg": "openai-whisper",
+   "fn": "whisper_asr",
+   "extra": [],
+   "also": [
+    "whisper-normalizer",
+    "rapidfuzz",
+    "--extra-index-url https://download.pytorch.org/whl/cpu"
+   ],
+   "apt": "ffmpeg",
+   "jobs": 1,
+   "model": "base.en"
+  },
+  {
+   "id": "faster-whisper",
+   "fmt": "speech",
+   "pkg": "faster-whisper",
+   "fn": "faster_whisper_asr",
+   "extra": [],
+   "also": [
+    "av==18.1.0",
+    "whisper-normalizer",
+    "rapidfuzz"
+   ],
+   "jobs": 1,
+   "model": "base.en int8",
+   "note": "With PyAV 18.1.0: faster-whisper 1.2.1 (the latest release) fails on every file with PyAV 19 (fixed on its main branch, not released yet).",
+   "note_url": "https://github.com/SYSTRAN/faster-whisper/issues/1589"
+  },
+  {
+   "id": "whisper.cpp",
+   "fmt": "speech",
+   "pkg": "pywhispercpp",
+   "fn": "whispercpp_asr",
+   "extra": [],
+   "also": [
+    "whisper-normalizer",
+    "rapidfuzz"
+   ],
+   "jobs": 1,
+   "model": "base.en"
+  },
+  {
+   "id": "Vosk",
+   "fmt": "speech",
+   "pkg": "vosk",
+   "fn": "vosk_asr",
+   "extra": [],
+   "also": [
+    "whisper-normalizer",
+    "rapidfuzz"
+   ],
+   "jobs": 1,
+   "model": "small en-us"
+  },
+  {
+   "id": "Moonshine",
+   "fmt": "speech",
+   "pkg": "useful-moonshine-onnx",
+   "fn": "moonshine_asr",
+   "extra": [],
+   "also": [
+    "whisper-normalizer",
+    "rapidfuzz"
+   ],
+   "jobs": 1,
+   "model": "base"
+  },
+  {
+   "id": "Parakeet",
+   "fmt": "speech",
+   "pkg": "onnx-asr",
+   "fn": "parakeet_asr",
+   "extra": [
+    "onnx-asr[cpu,hub]"
+   ],
+   "also": [
+    "whisper-normalizer",
+    "rapidfuzz"
+   ],
+   "jobs": 1,
+   "model": "TDT 0.6B v2"
   }
  ],
  "compare": [
@@ -353,6 +467,14 @@
   ["ocr", "RapidOCR", "Tesseract"],
   ["ocr", "EasyOCR", "RapidOCR"],
   ["ocr", "docTR", "PaddleOCR"],
-  ["ocr", "docTR", "Tesseract"]
+  ["ocr", "docTR", "Tesseract"],
+  ["speech", "faster-whisper", "Whisper"],
+  ["speech", "faster-whisper", "whisper.cpp"],
+  ["speech", "Vosk", "Whisper"],
+  ["speech", "faster-whisper", "Vosk"],
+  ["speech", "Parakeet", "faster-whisper"],
+  ["speech", "Moonshine", "faster-whisper"],
+  ["speech", "whisper.cpp", "Whisper"],
+  ["speech", "Parakeet", "Whisper"]
  ]
 }
