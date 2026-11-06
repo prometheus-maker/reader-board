@@ -81,6 +81,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: r-${{ matrix.fmt }}-${{ matrix.lib }}-${{ matrix.version }}
+          include-hidden-files: true
           # only this run's two files: the checkout also holds older results, which must not overwrite newer ones
           # (results/.keep keeps the archive rooted at results/, so paths survive the merge)
           path: |
