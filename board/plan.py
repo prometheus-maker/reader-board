@@ -2,7 +2,8 @@
 
 A run is missing when results/<fmt>/<lib>/<version>.jsonl.gz doesn't exist for the latest PyPI release.
 --all: every library again (e.g. after changing the corpus pin; old results move to an archive by hand).
---history N: also the N-1 releases before the latest (to see what each release broke or fixed)."""
+--history N: also the N-1 releases before the latest (to see what each release broke or fixed).
+--only FMT_OR_LIB[,...]: only these formats or library ids (e.g. after changing a recipe: --only docs --all)."""
 import json, sys, urllib.request
 from pathlib import Path
 
@@ -25,8 +26,11 @@ def releases(pkg, n):
 def main():
     force = "--all" in sys.argv
     n = int(sys.argv[sys.argv.index("--history") + 1]) if "--history" in sys.argv else 1
+    only = sys.argv[sys.argv.index("--only") + 1].split(",") if "--only" in sys.argv else None
     versions, todo = {}, []
     for lib in CFG["libs"]:
+        if only and lib["fmt"] not in only and lib["id"] not in only:
+            continue
         if lib["pkg"] not in versions:
             versions[lib["pkg"]] = releases(lib["pkg"], n)
         f = CFG["formats"][lib["fmt"]]

@@ -13,6 +13,10 @@ on:
         description: "Also test this many releases back (1 = latest only)"
         type: string
         default: "1"
+      only:
+        description: "Only these formats or library ids, comma-separated (empty = all)"
+        type: string
+        default: ""
 permissions:
   contents: write
   pages: write
@@ -30,7 +34,7 @@ jobs:
       - uses: actions/checkout@v4
       - id: plan
         run: |
-          m=$(python3 board/plan.py ${{ inputs.all && '--all' || '' }} --history ${{ inputs.history || '1' }})
+          m=$(python3 board/plan.py ${{ inputs.all && '--all' || '' }} --history ${{ inputs.history || '1' }} ${{ inputs.only && format('--only {0}', inputs.only) || '' }})
           echo "matrix=$m" >> "$GITHUB_OUTPUT"
           echo "count=$(echo "$m" | python3 -c 'import json,sys;print(len(json.load(sys.stdin)["include"]))')" >> "$GITHUB_OUTPUT"
           echo "$m" | python3 -m json.tool
