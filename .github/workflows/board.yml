@@ -23,7 +23,7 @@ permissions:
   id-token: write
 concurrency: board
 env:
-  CORPUSDIFF: git+https://github.com/prometheus-maker/corpusdiff@2e80e50beb391a2a69d7b358307a65b5c9ea2a9f
+  CORPUSDIFF: git+https://github.com/prometheus-maker/corpusdiff@027fb0202db4ff8c660eb784dbf573b9c7905866
 jobs:
   plan:
     runs-on: ubuntu-latest

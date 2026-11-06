@@ -535,6 +535,10 @@ text normalizer (case, punctuation, "twenty" = "20"); <b>word error rate</b> is 
 words over all reference words, the usual corpus-level WER. A clip that fails or comes back empty counts all its words
 as errors. The three Whisper implementations use the same base.en model; each other engine its documented default
 model. English, CPU, default decoding settings.</li>
+<li><b>Language detection</b>: each text's language is known from Tatoeba. An answer counts as correct if the
+library's code matches after mapping variants to ISO 639-1 (zh-cn → zh, nb → no, iw → he). Close languages count as
+different: Croatian detected as Bosnian or Serbian, or Norwegian as Danish, is wrong. One call per text with default
+settings and all languages enabled.</li>
 <li>Text <i>quality</i> (order, tables, layout) is not ranked in the other tables; they are about not breaking. The raw results
 have every output's size and hash.</li>
 <li>Same files for every version: the test collections are pinned to one commit. GitHub-hosted runner, so times are

@@ -24,6 +24,11 @@
    "commit": "a1bf660226106cf7fe0553cd9466034032d321c0",
    "title": "Speech test set (LibriSpeech, FLEURS, AMI meetings, Earnings-22 calls)",
    "repo": "prometheus-maker/speech-testset"
+  },
+  "langid": {
+   "commit": "4d86fa48f6c3b3e0bb9e6651ce0384bb7c1c9510",
+   "title": "Language test set (Tatoeba sentences, 38 languages)",
+   "repo": "prometheus-maker/langid-testset"
   }
  },
  "formats": {
@@ -96,6 +101,29 @@
     "won": "made fewer word errors",
     "what": "word error rate {v}",
     "head": "word error rate"
+   }
+  },
+  "langid": {
+   "corpus": "langid",
+   "ext": "txt",
+   "title": "Language detection",
+   "blob": "https://github.com/prometheus-maker/langid-testset/blob/{commit}/{path}",
+   "scored": true,
+   "timeout": 60,
+   "mem_mb": 3000,
+   "noun": "texts",
+   "warmup": "",
+   "question": "Which Python language detection library gets the language right most often?",
+   "vs_question": "which one detects the language right more often?",
+   "lead": "texts with a known language: 570 single sentences and 190 short paragraphs in 38 languages, from Tatoeba",
+   "score": {
+    "key": "correct",
+    "lower": false,
+    "th": "✅ Correct",
+    "card": "More detected correctly",
+    "won": "got the language right more often",
+    "what": "{v} correct",
+    "head": "share correct"
    }
   }
  },
@@ -442,6 +470,52 @@
    "model": "TDT 0.6B v2",
    "note": "With huggingface-hub 1.31.0: with 1.32+ (new shared cache layout) and current onnxruntime, the model fails to load (\"External data path escapes model directory\"), as many other ONNX models do.",
    "note_url": "https://github.com/MemPalace/mempalace/issues/2601"
+  },
+  {
+   "id": "langdetect",
+   "fmt": "langid",
+   "pkg": "langdetect",
+   "fn": "langdetect_lid",
+   "extra": [],
+   "also": [],
+   "jobs": 1
+  },
+  {
+   "id": "langid",
+   "fmt": "langid",
+   "pkg": "langid",
+   "fn": "langid_lid",
+   "extra": [],
+   "also": [],
+   "jobs": 1
+  },
+  {
+   "id": "py3langid",
+   "fmt": "langid",
+   "pkg": "py3langid",
+   "fn": "py3langid_lid",
+   "extra": [],
+   "also": [],
+   "jobs": 1
+  },
+  {
+   "id": "Lingua",
+   "fmt": "langid",
+   "pkg": "lingua-language-detector",
+   "fn": "lingua_lid",
+   "extra": [],
+   "also": [],
+   "jobs": 1
+  },
+  {
+   "id": "fast-langdetect",
+   "fmt": "langid",
+   "pkg": "fast-langdetect",
+   "fn": "fastlangdetect_lid",
+   "extra": [],
+   "also": [],
+   "jobs": 1,
+   "model": "fastText lid.176 (lite)"
   }
  ],
  "compare": [
@@ -478,6 +552,12 @@
   ["speech", "Parakeet", "faster-whisper"],
   ["speech", "Moonshine", "faster-whisper"],
   ["speech", "whisper.cpp", "Whisper"],
-  ["speech", "Parakeet", "Whisper"]
+  ["speech", "Parakeet", "Whisper"],
+  ["langid", "langdetect", "fast-langdetect"],
+  ["langid", "langdetect", "Lingua"],
+  ["langid", "langdetect", "langid"],
+  ["langid", "Lingua", "fast-langdetect"],
+  ["langid", "py3langid", "langid"],
+  ["langid", "Lingua", "py3langid"]
  ]
 }

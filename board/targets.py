@@ -295,3 +295,54 @@ def parakeet_asr(path):
         import onnx_asr
         _CACHE["parakeet"] = onnx_asr.load_model("nemo-parakeet-tdt-0.6b-v2")
     return _asr_score(_CACHE["parakeet"].recognize(path), path)
+
+
+# --- Language identification (NAME.txt with NAME.gt.txt holding its ISO 639-1 code) ---
+# Each library's one-call recipe from its docs, all languages enabled. Scored correct/incorrect after mapping the
+# library's code to ISO 639-1 (zh-cn -> zh, nb -> no, iw -> he).
+_LANG_ALIASES = {"zh-cn": "zh", "zh-tw": "zh", "zh-hans": "zh", "zh-hant": "zh", "nb": "no", "nn": "no",
+                 "iw": "he", "in": "id", "pes": "fa", "zho": "zh", "cmn": "zh"}
+
+
+def _lang_score(code, path):
+    truth = _truth(path).strip()
+    c = (code or "").strip().lower().replace("_", "-")
+    c = _LANG_ALIASES.get(c, c.split("-")[0])
+    return {"text": c, "metrics": {"correct": 1.0 if c == truth else 0.0}}
+
+
+def _lang_text(path):
+    with open(path, encoding="utf-8") as f:
+        return f.read().strip()
+
+
+def langdetect_lid(path):
+    from langdetect import DetectorFactory, detect
+    DetectorFactory.seed = 0  # langdetect is random unless seeded
+    return _lang_score(detect(_lang_text(path)), path)
+
+
+def langid_lid(path):
+    import langid
+    return _lang_score(langid.classify(_lang_text(path))[0], path)
+
+
+def py3langid_lid(path):
+    import py3langid
+    return _lang_score(py3langid.classify(_lang_text(path))[0], path)
+
+
+def lingua_lid(path):
+    if "lingua" not in _CACHE:
+        from lingua import LanguageDetectorBuilder
+        _CACHE["lingua"] = LanguageDetectorBuilder.from_all_languages().build()
+    lang = _CACHE["lingua"].detect_language_of(_lang_text(path))
+    return _lang_score(lang.iso_code_639_1.name if lang else None, path)
+
+
+def fastlangdetect_lid(path):
+    from fast_langdetect import detect
+    r = detect(_lang_text(path).replace("\n", " "))  # it reads one line at a time
+    if isinstance(r, list):
+        r = r[0] if r else {}
+    return _lang_score(r.get("lang"), path)
