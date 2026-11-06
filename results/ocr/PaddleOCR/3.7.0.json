@@ -47,7 +47,7 @@
   "opt-einsum==3.3.0",
   "packaging==26.3",
   "paddleocr==3.7.0",
-  "paddlepaddle==3.3.1",
+  "paddlepaddle==3.2.2",
   "paddlex==3.7.2",
   "pandas==3.1.1",
   "pillow==13.0.0",
@@ -81,6 +81,7 @@
   "wcwidth==0.9.4",
   "yarl==1.25.1"
  ],
- "finished": "2026-11-06T18:51:16Z",
- "run_url": "https://github.com/prometheus-maker/reader-board/actions/runs/42274237530"
+ "finished": "2026-11-06T19:32:42Z",
+ "run_url": "https://github.com/prometheus-maker/reader-board/actions/runs/42274664336",
+ "engine": ""
 }
