@@ -58,7 +58,7 @@
   "useful-moonshine-onnx==20251121",
   "whisper_normalizer==1.0.0"
  ],
- "finished": "2026-11-06T19:36:18Z",
- "run_url": "https://github.com/prometheus-maker/reader-board/actions/runs/42280036476",
+ "finished": "2026-11-06T19:42:01Z",
+ "run_url": "https://github.com/prometheus-maker/reader-board/actions/runs/42281380349",
  "engine": ""
 }
