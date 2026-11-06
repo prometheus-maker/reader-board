@@ -14,5 +14,7 @@
   "pytesseract==0.3.13"
  ],
  "finished": "2026-11-06T18:51:21Z",
- "run_url": "https://github.com/prometheus-maker/reader-board/actions/runs/42274237530"
+ "run_url": "https://github.com/prometheus-maker/reader-board/actions/runs/42274237530",
+ "engine": "tesseract 5.5.0",
+ "engine_source": "apt install log of run 42274237530 (tesseract-ocr 5.5.0-1build1, tesseract-ocr-eng 4.1.0)"
 }
