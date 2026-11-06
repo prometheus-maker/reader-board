@@ -435,7 +435,7 @@ If you need structure for RAG, also look at the output on your own files.</p>
 {method_html()}"""
         name = vs_slug(a, b)
         noun = fcfg.get("noun", "files")
-        desc = (f"{a} vs {b}, measured on {len(files):,} real-world {noun} with known text: words found {pct(ta)} vs {pct(tb)}; "
+        desc = (f"{a} vs {b}, measured on {len(files):,} real-world {noun} with known text: {score(fcfg)['head']} {pct(ta)} vs {pct(tb)}; "
                 f"{fast} {ratio}. Re-tested on every release." if fcfg.get("scored") else
                 f"{a} vs {b}, measured: text from {ta:,} vs {tb:,} of {len(files):,} odd real-world "
                 f"{'documents' if fcfg.get('per_ext') else title_f + ' files'}; {fast} {ratio}. Re-tested on every release.")
