@@ -434,11 +434,14 @@
     "onnx-asr[cpu,hub]"
    ],
    "also": [
+    "onnxruntime==1.29.0",
     "whisper-normalizer",
     "rapidfuzz"
    ],
    "jobs": 1,
-   "model": "TDT 0.6B v2"
+   "model": "TDT 0.6B v2",
+   "note": "With onnxruntime 1.29.0: with 1.30+ and the current Hugging Face cache, the model fails to load (\"External data path escapes model directory\"), as for many other ONNX models.",
+   "note_url": "https://github.com/MemPalace/mempalace/issues/2601"
   }
  ],
  "compare": [
