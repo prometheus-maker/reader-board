@@ -305,10 +305,12 @@
    "fn": "paddleocr_ocr",
    "extra": [],
    "also": [
-    "paddlepaddle",
+    "paddlepaddle==3.2.2",
     "rapidfuzz"
    ],
-   "jobs": 1
+   "jobs": 1,
+   "note": "With paddlepaddle 3.2.2, as its maintainers advise: with 3.3.1 (the default install) every image fails on CPU (PaddleOCR issue #18162).",
+   "note_url": "https://github.com/PaddlePaddle/PaddleOCR/issues/18162"
   },
   {
    "id": "docTR",
