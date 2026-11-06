@@ -82,7 +82,9 @@ jobs:
         with:
           name: r-${{ matrix.fmt }}-${{ matrix.lib }}-${{ matrix.version }}
           # only this run's two files: the checkout also holds older results, which must not overwrite newer ones
+          # (results/.keep keeps the archive rooted at results/, so paths survive the merge)
           path: |
+            results/.keep
             results/${{ matrix.fmt }}/${{ matrix.lib }}/${{ matrix.version }}.jsonl.gz
             results/${{ matrix.fmt }}/${{ matrix.lib }}/${{ matrix.version }}.json
 
