@@ -81,34 +81,38 @@ def stats(rows, readable, scored=False):
 WORST = {"word_recall": 0.0, "cer": 1.0, "wer": 1.0, "wer_corpus": 1.0}  # score of a file that failed or came back empty
 
 
-REF_WORDS = {}  # file -> reference word count, from any library that read it (for corpus-level WER)
+# Pooled scores (libs.json formats.*.pools): sum of a numerator metric over sum of a denominator metric, so big files
+# weigh more. The denominator per file comes from any library that ran the file (DEN), so a file that failed still
+# counts: fail "den" counts all its denominator as the numerator (speech: every word an error), "zero" counts 0
+# (PDF checks: none passed).
+POOLS = [p for f in CFG["formats"].values() for p in f.get("pools", [])]
+DEN = {}  # (denominator metric, file) -> value
 
 
 def accuracy(rows):
     """Mean of the per-file scores a scored recipe reports (OCR: word_recall, cer; speech: wer, word_recall). A file
-    that failed or came back empty counts as the worst score, so failing is never cheaper than guessing.
-    Speech also gets "wer_corpus": all word errors / all reference words (the usual way to report WER), where a
-    failed or empty file counts every one of its reference words as an error."""
+    that failed or came back empty counts as the worst score, so failing is never cheaper than guessing. Plus the
+    pooled scores (POOLS) for the files whose denominator is known."""
     if not rows:
         return {}
     keys = {k for r in rows.values() for k in r.get("metrics", {})} | {"word_recall", "cer"}
-    keys -= {"errors", "ref_words"}
+    keys -= {p[x] for p in POOLS for x in ("num", "den")}
     out = {}
     for k in sorted(keys):
         w = WORST.get(k, 0.0)
         vals = [r.get("metrics", {}).get(k, w) if kind(r) == "text" else w for r in rows.values()]
         out[k] = round(sum(vals) / len(vals), 4)
-    if any(f in REF_WORDS for f in rows):  # speech: some library reported reference word counts for these files
-        err = den = 0
+    for p in POOLS:
+        num = den = 0
         for f, r in rows.items():
-            n = REF_WORDS.get(f)
+            n = DEN.get((p["den"], f))
             if n is None:
                 continue
             m = r.get("metrics", {})
-            err += m["errors"] if kind(r) == "text" and "errors" in m else n
+            num += m[p["num"]] if kind(r) == "text" and p["num"] in m else (n if p["fail"] == "den" else 0)
             den += n
         if den:
-            out["wer_corpus"] = round(err / den, 4)
+            out[p["key"]] = round(num / den, 4)
     return out
 
 
@@ -199,8 +203,9 @@ def build(out):
         latest = {lib: lst[-1] for lib, lst in libs.items()}
         for _, _, rows in latest.values():
             for f, r in rows.items():
-                if "ref_words" in r.get("metrics", {}):
-                    REF_WORDS[f] = r["metrics"]["ref_words"]
+                for p in fcfg.get("pools", []):
+                    if p["den"] in r.get("metrics", {}):
+                        DEN[(p["den"], f)] = r["metrics"][p["den"]]
         files = set().union(*(set(rows) for _, _, rows in latest.values()))
         readable = {f for f in files if any(kind(rows.get(f)) == "text" for _, _, rows in latest.values())}
         table = []
@@ -412,7 +417,7 @@ def write_vs_pages(out, runs):
         body = f"""<p class="mut"><a href="{fmt}.html">← {esc(title_f)}: all libraries</a> · <a href="index.html">Reader board</a></p>
 <h1>{esc(a)} vs {esc(b)}: {esc(fcfg.get('vs_question') or 'which one reads more real-world ' + ('documents' if fcfg.get('per_ext') else title_f + ' files') + '?')}</h1>
 <p class="lead">{esc(a)} {esc(va)} and {esc(b)} {esc(vb)} on the same {len(files):,} {esc(fcfg.get('lead') or 'odd real-world files')} from
-<a href="https://github.com/{repo}/tree/{commit}" target="_blank" rel="noopener">{esc(CFG['corpora'][fcfg['corpus']]['title'])}</a>{'' if fcfg.get('lead') else ' (bug reports, fuzzers, broken exporters)'}.
+<a href="{esc(CFG['corpora'][fcfg['corpus']].get('url', 'https://github.com/{repo}/tree/{commit}').format(repo=repo, commit=commit))}" target="_blank" rel="noopener">{esc(CFG['corpora'][fcfg['corpus']]['title'])}</a>{'' if fcfg.get('lead') else ' (bug reports, fuzzers, broken exporters)'}.
 Measured, not opinion; re-tested by itself on every new PyPI release. Updated {built}.</p>
 <div class="glance"><div class="g1"><span class="mut">{score(fcfg)['card'] if fcfg.get('scored') else 'More files read'}</span><b>{esc(more or 'tie')}</b><span class="mut">{fv(hi)} vs {fv(lo)}</span></div>
 <div class="g1"><span class="mut">Faster on this set</span><b>{esc(fast)}</b><span class="mut">{fs:,} s vs {ss:,} s total ({ratio})</span></div>
@@ -481,7 +486,10 @@ def group_matrix(table, files, fcfg):
     """Scored formats: words found per folder of the test set (documents, receipts, screenshots, photos...)."""
     groups = {}
     for f in files:
-        groups.setdefault(f.split("/", 1)[0] if "/" in f else "other", []).append(f)
+        parts = f.split("/")
+        lvl = fcfg.get("group_level", 0)
+        g = parts[lvl] if len(parts) > lvl + 1 else "other"
+        groups.setdefault(fcfg.get("group_names", {}).get(g, g), []).append(f)
     head = "".join(f"<th>{esc(t[0])}</th>" for t in table)
     trs = []
     for g, fs in sorted(groups.items()):
@@ -552,6 +560,11 @@ model. English, CPU, default decoding settings.</li>
 library's code matches after mapping variants to ISO 639-1 (zh-cn → zh, nb → no, iw → he). Close languages count as
 different: Croatian detected as Bosnian or Serbian, or Norwegian as Danish, is wrong. One call per text with default
 settings and all languages enabled.</li>
+<li><b>PDF → Markdown</b>: pages from AI2's <a href="https://huggingface.co/datasets/allenai/olmOCR-bench" target="_blank" rel="noopener">olmOCR-bench</a>
+(ODC-BY), scored with its own checks (vendored, Apache-2.0): a sentence must be present, a page header or footer
+absent, two passages in the right order, a table cell next to the right neighbour. <b>Checks passed</b> is all passed
+checks over all checks; a page that fails or comes back empty passes none. Math pages are left out (their checks
+need a browser to render formulas). Default settings: whatever OCR a tool does on its own, it does.</li>
 <li>Text <i>quality</i> (order, tables, layout) is not ranked in the other tables; they are about not breaking. The raw results
 have every output's size and hash.</li>
 <li>Same files for every version: the test collections are pinned to one commit. GitHub-hosted runner, so times are

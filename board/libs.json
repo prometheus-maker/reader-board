@@ -29,6 +29,13 @@
    "commit": "4d86fa48f6c3b3e0bb9e6651ce0384bb7c1c9510",
    "title": "Language test set (Tatoeba sentences, 38 languages)",
    "repo": "prometheus-maker/langid-testset"
+  },
+  "olmocr": {
+   "commit": "54a96a6fb6a2bd3b297e59869491db4d3625b711",
+   "title": "olmOCR-bench (AI2), 190 pages",
+   "repo": "allenai/olmOCR-bench",
+   "url": "https://huggingface.co/datasets/allenai/olmOCR-bench/tree/{commit}/bench_data",
+   "files": "board/olmocr-sample.txt"
   }
  },
  "formats": {
@@ -121,7 +128,15 @@
     "url": "https://apify.com/prometheus-maker/audio-video-transcriber",
     "name": "Audio & Video Transcriber",
     "uses": "faster-whisper"
-   }
+   },
+   "pools": [
+    {
+     "key": "wer_corpus",
+     "num": "errors",
+     "den": "ref_words",
+     "fail": "den"
+    }
+   ]
   },
   "langid": {
    "corpus": "langid",
@@ -145,6 +160,44 @@
     "what": "{v} correct",
     "head": "share correct"
    }
+  },
+  "pdfmd": {
+   "corpus": "olmocr",
+   "ext": "pdf",
+   "title": "PDF → Markdown (quality)",
+   "blob": "https://huggingface.co/datasets/allenai/olmOCR-bench/blob/{commit}/bench_data/{path}",
+   "scored": true,
+   "timeout": 300,
+   "mem_mb": 6000,
+   "noun": "pages",
+   "question": "Which Python tool turns PDFs into the most faithful Markdown?",
+   "vs_question": "which one passes more of the page checks?",
+   "lead": "PDF pages with checks written by AI2's olmOCR-bench: multi-column articles, tiny print, old scans, tables, pages with headers and footers",
+   "group_level": 1,
+   "group_names": {
+    "headers_footers": "headers & footers",
+    "long_tiny_text": "tiny text",
+    "multi_column": "multi-column",
+    "old_scans": "old scans",
+    "tables": "tables"
+   },
+   "pools": [
+    {
+     "key": "pass_corpus",
+     "num": "passed",
+     "den": "checks",
+     "fail": "zero"
+    }
+   ],
+   "score": {
+    "key": "pass_corpus",
+    "lower": false,
+    "th": "✅ Checks<br>passed",
+    "card": "More checks passed",
+    "won": "passed more page checks",
+    "what": "passes {v} of the checks",
+    "head": "checks passed"
+   }
   }
  },
  "libs": [
@@ -153,9 +206,7 @@
    "fmt": "pdf",
    "pkg": "pypdf",
    "fn": "pypdf_text",
-   "extra": [
-    "pypdf[full]"
-   ]
+   "extra": ["pypdf[full]"]
   },
   {
    "id": "pdfminer.six",
@@ -190,9 +241,7 @@
    "fmt": "pdf",
    "pkg": "markitdown",
    "fn": "markitdown_text",
-   "extra": [
-    "markitdown[pdf]"
-   ]
+   "extra": ["markitdown[pdf]"]
   },
   {
    "id": "python-docx",
@@ -220,9 +269,7 @@
    "fmt": "docx",
    "pkg": "markitdown",
    "fn": "markitdown_text",
-   "extra": [
-    "markitdown[docx]"
-   ]
+   "extra": ["markitdown[docx]"]
   },
   {
    "id": "openpyxl",
@@ -243,9 +290,7 @@
    "fmt": "xlsx",
    "pkg": "markitdown",
    "fn": "markitdown_text",
-   "extra": [
-    "markitdown[xlsx]"
-   ]
+   "extra": ["markitdown[xlsx]"]
   },
   {
    "id": "python-pptx",
@@ -259,34 +304,16 @@
    "fmt": "pptx",
    "pkg": "markitdown",
    "fn": "markitdown_text",
-   "extra": [
-    "markitdown[pptx]"
-   ]
+   "extra": ["markitdown[pptx]"]
   },
   {
    "id": "markitdown",
    "fmt": "docs",
    "pkg": "markitdown",
    "fn": "markitdown_any",
-   "extra": [
-    "markitdown[all]"
-   ],
+   "extra": ["markitdown[all]"],
    "unsupported": "UnsupportedFormatException",
-   "formats": [
-    "pdf",
-    "docx",
-    "pptx",
-    "xlsx",
-    "xls",
-    "html",
-    "htm",
-    "csv",
-    "json",
-    "txt",
-    "md",
-    "epub",
-    "msg"
-   ]
+   "formats": ["pdf", "docx", "pptx", "xlsx", "xls", "html", "htm", "csv", "json", "txt", "md", "epub", "msg"]
   },
   {
    "id": "Docling",
@@ -296,35 +323,15 @@
    "extra": [],
    "jobs": 2,
    "unsupported": "(?i)format not allowed|FormatNotAllowed",
-   "formats": [
-    "pdf",
-    "docx",
-    "pptx",
-    "xlsx",
-    "html",
-    "htm",
-    "xhtml",
-    "csv",
-    "md",
-    "txt",
-    "eml",
-    "msg",
-    "odt",
-    "ods",
-    "odp"
-   ],
-   "also": [
-    "odfdo"
-   ]
+   "formats": ["pdf", "docx", "pptx", "xlsx", "html", "htm", "xhtml", "csv", "md", "txt", "eml", "msg", "odt", "ods", "odp"],
+   "also": ["odfdo"]
   },
   {
    "id": "Unstructured",
    "fmt": "docs",
    "pkg": "unstructured",
    "fn": "unstructured_any",
-   "extra": [
-    "unstructured[all-docs]"
-   ],
+   "extra": ["unstructured[all-docs]"],
    "jobs": 2,
    "apt": "libmagic1 poppler-utils tesseract-ocr libreoffice-core libreoffice-writer libreoffice-calc libreoffice-impress pandoc",
    "unsupported": "(?i)UnsupportedFileFormatError|is not supported|Invalid file"
@@ -344,10 +351,7 @@
    "pkg": "pytesseract",
    "fn": "tesseract_ocr",
    "extra": [],
-   "also": [
-    "pillow",
-    "rapidfuzz"
-   ],
+   "also": ["pillow", "rapidfuzz"],
    "apt": "tesseract-ocr tesseract-ocr-eng",
    "jobs": 1
   },
@@ -357,10 +361,7 @@
    "pkg": "easyocr",
    "fn": "easyocr_ocr",
    "extra": [],
-   "also": [
-    "rapidfuzz",
-    "--extra-index-url https://download.pytorch.org/whl/cpu"
-   ],
+   "also": ["rapidfuzz", "--extra-index-url https://download.pytorch.org/whl/cpu"],
    "jobs": 1
   },
   {
@@ -369,10 +370,7 @@
    "pkg": "rapidocr",
    "fn": "rapidocr_ocr",
    "extra": [],
-   "also": [
-    "onnxruntime",
-    "rapidfuzz"
-   ],
+   "also": ["onnxruntime", "rapidfuzz"],
    "jobs": 1
   },
   {
@@ -381,10 +379,7 @@
    "pkg": "paddleocr",
    "fn": "paddleocr_ocr",
    "extra": [],
-   "also": [
-    "paddlepaddle==3.2.2",
-    "rapidfuzz"
-   ],
+   "also": ["paddlepaddle==3.2.2", "rapidfuzz"],
    "jobs": 1,
    "note": "With paddlepaddle 3.2.2, as its maintainers advise: with 3.3.1 (the default install) every image fails on CPU (PaddleOCR issue #18162).",
    "note_url": "https://github.com/PaddlePaddle/PaddleOCR/issues/18162"
@@ -394,13 +389,8 @@
    "fmt": "ocr",
    "pkg": "python-doctr",
    "fn": "doctr_ocr",
-   "extra": [
-    "python-doctr[torch]"
-   ],
-   "also": [
-    "rapidfuzz",
-    "--extra-index-url https://download.pytorch.org/whl/cpu"
-   ],
+   "extra": ["python-doctr[torch]"],
+   "also": ["rapidfuzz", "--extra-index-url https://download.pytorch.org/whl/cpu"],
    "jobs": 1
   },
   {
@@ -409,11 +399,7 @@
    "pkg": "openai-whisper",
    "fn": "whisper_asr",
    "extra": [],
-   "also": [
-    "whisper-normalizer",
-    "rapidfuzz",
-    "--extra-index-url https://download.pytorch.org/whl/cpu"
-   ],
+   "also": ["whisper-normalizer", "rapidfuzz", "--extra-index-url https://download.pytorch.org/whl/cpu"],
    "apt": "ffmpeg",
    "jobs": 1,
    "model": "base.en"
@@ -424,11 +410,7 @@
    "pkg": "faster-whisper",
    "fn": "faster_whisper_asr",
    "extra": [],
-   "also": [
-    "av==18.1.0",
-    "whisper-normalizer",
-    "rapidfuzz"
-   ],
+   "also": ["av==18.1.0", "whisper-normalizer", "rapidfuzz"],
    "jobs": 1,
    "model": "base.en int8",
    "note": "With PyAV 18.1.0: faster-whisper 1.2.1 (the latest release) fails on every file with PyAV 19 (fixed on its main branch, not released yet).",
@@ -440,10 +422,7 @@
    "pkg": "pywhispercpp",
    "fn": "whispercpp_asr",
    "extra": [],
-   "also": [
-    "whisper-normalizer",
-    "rapidfuzz"
-   ],
+   "also": ["whisper-normalizer", "rapidfuzz"],
    "jobs": 1,
    "model": "base.en"
   },
@@ -453,10 +432,7 @@
    "pkg": "vosk",
    "fn": "vosk_asr",
    "extra": [],
-   "also": [
-    "whisper-normalizer",
-    "rapidfuzz"
-   ],
+   "also": ["whisper-normalizer", "rapidfuzz"],
    "jobs": 1,
    "model": "small en-us"
   },
@@ -466,10 +442,7 @@
    "pkg": "useful-moonshine-onnx",
    "fn": "moonshine_asr",
    "extra": [],
-   "also": [
-    "whisper-normalizer",
-    "rapidfuzz"
-   ],
+   "also": ["whisper-normalizer", "rapidfuzz"],
    "jobs": 1,
    "model": "base"
   },
@@ -478,14 +451,8 @@
    "fmt": "speech",
    "pkg": "onnx-asr",
    "fn": "parakeet_asr",
-   "extra": [
-    "onnx-asr[cpu,hub]"
-   ],
-   "also": [
-    "huggingface-hub==1.31.0",
-    "whisper-normalizer",
-    "rapidfuzz"
-   ],
+   "extra": ["onnx-asr[cpu,hub]"],
+   "also": ["huggingface-hub==1.31.0", "whisper-normalizer", "rapidfuzz"],
    "jobs": 1,
    "model": "TDT 0.6B v2",
    "note": "With huggingface-hub 1.31.0: with 1.32+ (new shared cache layout) and current onnxruntime, the model fails to load (\"External data path escapes model directory\"), as many other ONNX models do.",
@@ -536,6 +503,52 @@
    "also": [],
    "jobs": 1,
    "model": "fastText lid.176 (lite)"
+  },
+  {
+   "id": "pymupdf4llm",
+   "fmt": "pdfmd",
+   "pkg": "pymupdf4llm",
+   "fn": "pymupdf4llm_md",
+   "extra": [],
+   "also": ["beautifulsoup4", "fuzzysearch", "rapidfuzz"],
+   "jobs": 4
+  },
+  {
+   "id": "markitdown",
+   "fmt": "pdfmd",
+   "pkg": "markitdown",
+   "fn": "markitdown_md",
+   "extra": ["markitdown[pdf]"],
+   "also": ["beautifulsoup4", "fuzzysearch", "rapidfuzz"],
+   "jobs": 4
+  },
+  {
+   "id": "Docling",
+   "fmt": "pdfmd",
+   "pkg": "docling",
+   "fn": "docling_md",
+   "extra": [],
+   "also": ["beautifulsoup4", "fuzzysearch", "rapidfuzz", "--extra-index-url https://download.pytorch.org/whl/cpu"],
+   "jobs": 2
+  },
+  {
+   "id": "Kreuzberg",
+   "fmt": "pdfmd",
+   "pkg": "kreuzberg",
+   "fn": "kreuzberg_md",
+   "extra": [],
+   "also": ["beautifulsoup4", "fuzzysearch", "rapidfuzz"],
+   "jobs": 2,
+   "apt": "tesseract-ocr tesseract-ocr-eng"
+  },
+  {
+   "id": "Marker",
+   "fmt": "pdfmd",
+   "pkg": "marker-pdf",
+   "fn": "marker_md",
+   "extra": [],
+   "also": ["beautifulsoup4", "fuzzysearch", "rapidfuzz", "--extra-index-url https://download.pytorch.org/whl/cpu"],
+   "jobs": 1
   }
  ],
  "compare": [
@@ -578,6 +591,10 @@
   ["langid", "langdetect", "langid"],
   ["langid", "Lingua", "fast-langdetect"],
   ["langid", "py3langid", "langid"],
-  ["langid", "Lingua", "py3langid"]
+  ["langid", "Lingua", "py3langid"],
+  ["pdfmd", "pymupdf4llm", "markitdown"],
+  ["pdfmd", "Docling", "Marker"],
+  ["pdfmd", "Docling", "pymupdf4llm"],
+  ["pdfmd", "Kreuzberg", "Docling"]
  ]
 }
