@@ -1,0 +1,153 @@
+{
+ "corpora": {
+  "pdfjs": {
+   "commit": "50d130738a150d43669c9554909020661ded5997",
+   "title": "Mozilla pdf.js test PDFs"
+  },
+  "poi": {
+   "commit": "39edce935ef8ed746b4457062ecfa2670eabe49f",
+   "title": "Apache POI test files"
+  }
+ },
+ "formats": {
+  "pdf": {
+   "corpus": "pdfjs",
+   "ext": "pdf",
+   "blob": "https://github.com/mozilla/pdf.js/blob/{commit}/test/pdfs/{path}",
+   "title": "PDF"
+  },
+  "docx": {
+   "corpus": "poi",
+   "ext": "docx",
+   "blob": "https://github.com/apache/poi/blob/{commit}/test-data/document/{path}",
+   "title": "Word (.docx)"
+  },
+  "xlsx": {
+   "corpus": "poi",
+   "ext": "xlsx",
+   "blob": "https://github.com/apache/poi/blob/{commit}/test-data/spreadsheet/{path}",
+   "title": "Excel (.xlsx)"
+  },
+  "pptx": {
+   "corpus": "poi",
+   "ext": "pptx",
+   "blob": "https://github.com/apache/poi/blob/{commit}/test-data/slideshow/{path}",
+   "title": "PowerPoint (.pptx)"
+  }
+ },
+ "libs": [
+  {
+   "id": "pypdf",
+   "fmt": "pdf",
+   "pkg": "pypdf",
+   "fn": "pypdf_text",
+   "extra": []
+  },
+  {
+   "id": "pdfminer.six",
+   "fmt": "pdf",
+   "pkg": "pdfminer.six",
+   "fn": "pdfminer_text",
+   "extra": []
+  },
+  {
+   "id": "pdfplumber",
+   "fmt": "pdf",
+   "pkg": "pdfplumber",
+   "fn": "pdfplumber_text",
+   "extra": []
+  },
+  {
+   "id": "pypdfium2",
+   "fmt": "pdf",
+   "pkg": "pypdfium2",
+   "fn": "pdfium_text",
+   "extra": []
+  },
+  {
+   "id": "PyMuPDF",
+   "fmt": "pdf",
+   "pkg": "pymupdf",
+   "fn": "pymupdf_text",
+   "extra": []
+  },
+  {
+   "id": "markitdown",
+   "fmt": "pdf",
+   "pkg": "markitdown",
+   "fn": "markitdown_text",
+   "extra": [
+    "markitdown[pdf]"
+   ]
+  },
+  {
+   "id": "python-docx",
+   "fmt": "docx",
+   "pkg": "python-docx",
+   "fn": "python_docx_text",
+   "extra": []
+  },
+  {
+   "id": "docx2txt",
+   "fmt": "docx",
+   "pkg": "docx2txt",
+   "fn": "docx2txt_text",
+   "extra": []
+  },
+  {
+   "id": "mammoth",
+   "fmt": "docx",
+   "pkg": "mammoth",
+   "fn": "mammoth_text",
+   "extra": []
+  },
+  {
+   "id": "markitdown",
+   "fmt": "docx",
+   "pkg": "markitdown",
+   "fn": "markitdown_text",
+   "extra": [
+    "markitdown[docx]"
+   ]
+  },
+  {
+   "id": "openpyxl",
+   "fmt": "xlsx",
+   "pkg": "openpyxl",
+   "fn": "openpyxl_text",
+   "extra": []
+  },
+  {
+   "id": "python-calamine",
+   "fmt": "xlsx",
+   "pkg": "python-calamine",
+   "fn": "calamine_text",
+   "extra": []
+  },
+  {
+   "id": "markitdown",
+   "fmt": "xlsx",
+   "pkg": "markitdown",
+   "fn": "markitdown_text",
+   "extra": [
+    "markitdown[xlsx]"
+   ]
+  },
+  {
+   "id": "python-pptx",
+   "fmt": "pptx",
+   "pkg": "python-pptx",
+   "fn": "python_pptx_text",
+   "extra": []
+  },
+  {
+   "id": "markitdown",
+   "fmt": "pptx",
+   "pkg": "markitdown",
+   "fn": "markitdown_text",
+   "extra": [
+    "markitdown[pptx]"
+   ]
+  }
+ ]
+}
