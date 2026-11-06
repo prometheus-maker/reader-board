@@ -33,6 +33,7 @@ jobs:
           echo "$m" | python3 -m json.tool
 
   run:
+    name: ${{ matrix.fmt }} · ${{ matrix.lib }} ${{ matrix.version }}
     needs: plan
     if: needs.plan.outputs.count != '0'
     runs-on: ubuntu-latest

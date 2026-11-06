@@ -96,6 +96,9 @@ tr:last-child td{border-bottom:0}.rank{color:var(--mut);width:1.5em}.lib{font-we
 .z{color:var(--mut)}code{font:13px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code);padding:1px 4px;border-radius:4px}
 .files td{white-space:normal;text-align:left;font-size:14px;vertical-align:top}.files td:first-child{word-break:break-all;width:34%}
 .chg{font-size:14px;margin:2px 0}.up{color:var(--good)}.down{color:var(--bad)}footer{margin-top:44px;color:var(--mut);font-size:14px}
+.glance{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin:10px 0}
+a.g1{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 14px;
+text-decoration:none;color:var(--fg)}a.g1:hover{border-color:var(--acc)}a.g1 b{font-size:20px;color:var(--good)}
 .ai{font-size:12px;font-weight:600;background:var(--code);border:1px solid var(--line);border-radius:99px;padding:2px 9px;color:var(--mut)}
 """
 
@@ -121,7 +124,7 @@ def build(out):
     runs = load_runs()
     out.mkdir(parents=True, exist_ok=True)
     summary = {"built": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "formats": {}}
-    sections, nfiles, nlibs = [], 0, 0
+    sections, glance, nfiles, nlibs = [], [], 0, 0
     for fmt, fcfg in CFG["formats"].items():
         libs = runs.get(fmt, {})
         if not libs:
@@ -140,6 +143,10 @@ def build(out):
                 hist.append({"from": v0, "to": v1, "broke": broke, "fixed": fixed})
             table.append((lib, ver, meta, rows, c, fails, empties, hist))
         table.sort(key=lambda t: (t[4]["fail_readable"], t[4]["empty_readable"], t[4]["total_s"]))
+        best = table[0]
+        glance.append(f'<a class="g1" href="#{fmt}"><span class="mut">{esc(fcfg["title"])}</span>'
+                      f'<b>{esc(best[0])}</b><span class="mut">fails on {best[4]["fail_readable"]} of {len(readable):,} '
+                      f'readable files</span></a>')
         nfiles += len(files)
         nlibs += len(table)
         summary["formats"][fmt] = {"files": len(files), "readable": len(readable), "corpus_commit": commit,
@@ -174,6 +181,7 @@ def build(out):
 broken exporters. Every new release on PyPI is tested again by itself.</p>
 <div class="mut">Updated {built}. Lower is better in the 🔴 🟡 ⏱ columns; the table is sorted by them. Click a library to
 see every file it failed on, with the error, and what changed between its versions.</div>
+<h2>🏆 Most robust per format</h2><div class="glance">{''.join(glance)}</div>
 {''.join(sections)}
 <h2>How this is measured</h2>
 <ul>
