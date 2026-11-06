@@ -218,9 +218,10 @@ def build(out):
     vs_html = "".join(f'<a class="g1" href="{n}"><span class="mut">{esc(CFG["formats"][f]["title"])}</span><b style="font-size:17px">{esc(a)} vs {esc(b)}</b></a>'
                       for f, a, b, n in vs)
     body = f"""<h1>Reader board</h1>
-<p class="lead">Which Python library reads <b>PDF, Word, Excel and PowerPoint</b> files without breaking? Each one runs on
-{nfiles:,} odd real-world files from the test collections of pdf.js and Apache POI: files from bug reports, fuzzers and
-broken exporters. Every new release on PyPI is tested again by itself.</p>
+<p class="lead">Which Python library reads <b>PDF, Word, Excel and PowerPoint</b> files without breaking, and which
+<b>OCR engine</b> reads images best? Each one runs on the same odd real-world files from the test collections of pdf.js,
+Apache POI and Apache Tika (bug reports, fuzzers, broken exporters), and OCR engines on images with known text.
+Every new release on PyPI is tested again by itself.</p>
 <div class="mut">Updated {built}. Lower is better in the 🔴 🟡 ⏱ columns; the table is sorted by them (the any-document table: by files turned into text). Click a library to
 see every file it failed on, with the error, and what changed between its versions.
 New releases as they are tested: <a href="feed.xml">Atom feed</a>.</div>
@@ -335,10 +336,10 @@ def write_vs_pages(out, runs):
         table = [(a, va, ma, {f: ra[f] for f in files}), (b, vb, mb, {f: rb[f] for f in files})]
         title_f = fcfg["title"]
         body = f"""<p class="mut"><a href="{fmt}.html">← {esc(title_f)}: all libraries</a> · <a href="index.html">Reader board</a></p>
-<h1>{esc(a)} vs {esc(b)}: which one reads more real-world {esc('documents' if fcfg.get('per_ext') else title_f + ' files')}?</h1>
-<p class="lead">{esc(a)} {esc(va)} and {esc(b)} {esc(vb)} on the same {len(files):,} odd real-world files from
-<a href="https://github.com/{repo}/tree/{commit}" target="_blank" rel="noopener">{esc(CFG['corpora'][fcfg['corpus']]['title'])}</a>
-(bug reports, fuzzers, broken exporters). Measured, not opinion; re-tested by itself on every new PyPI release. Updated {built}.</p>
+<h1>{esc(a)} vs {esc(b)}: {esc(fcfg.get('vs_question') or 'which one reads more real-world ' + ('documents' if fcfg.get('per_ext') else title_f + ' files') + '?')}</h1>
+<p class="lead">{esc(a)} {esc(va)} and {esc(b)} {esc(vb)} on the same {len(files):,} {esc(fcfg.get('lead') or 'odd real-world files')} from
+<a href="https://github.com/{repo}/tree/{commit}" target="_blank" rel="noopener">{esc(CFG['corpora'][fcfg['corpus']]['title'])}</a>{'' if fcfg.get('lead') else ' (bug reports, fuzzers, broken exporters)'}.
+Measured, not opinion; re-tested by itself on every new PyPI release. Updated {built}.</p>
 <div class="glance"><div class="g1"><span class="mut">{'More words found' if fcfg.get('scored') else 'More files read'}</span><b>{esc(more or 'tie')}</b><span class="mut">{fv(max(ta, tb))} vs {fv(min(ta, tb))}</span></div>
 <div class="g1"><span class="mut">Faster on this set</span><b>{esc(fast)}</b><span class="mut">{fs:,} s vs {ss:,} s total ({ratio})</span></div>
 <div class="g1"><span class="mut">Both read</span><b>{len(both):,}</b><span class="mut">only {esc(a)}: {len(only_a)} · only {esc(b)}: {len(only_b)}</span></div></div>
@@ -353,9 +354,12 @@ def write_vs_pages(out, runs):
 If you need structure for RAG, also look at the output on your own files.</p>
 {method_html()}"""
         name = vs_slug(a, b)
-        (out / name).write_text(page(f"{a} vs {b}: tested on {len(files):,} real-world files ({built[-4:]})", body,
-                                     f"{a} vs {b}, measured: text from {ta:,} vs {tb:,} of {len(files):,} odd real-world "
-                                     f"{'documents' if fcfg.get('per_ext') else title_f + ' files'}; {fast} {ratio}. Re-tested on every release."))
+        noun = fcfg.get("noun", "files")
+        desc = (f"{a} vs {b}, measured on {len(files):,} real-world {noun} with known text: words found {pct(ta)} vs {pct(tb)}; "
+                f"{fast} {ratio}. Re-tested on every release." if fcfg.get("scored") else
+                f"{a} vs {b}, measured: text from {ta:,} vs {tb:,} of {len(files):,} odd real-world "
+                f"{'documents' if fcfg.get('per_ext') else title_f + ' files'}; {fast} {ratio}. Re-tested on every release.")
+        (out / name).write_text(page(f"{a} vs {b}: tested on {len(files):,} real-world {noun} ({built[-4:]})", body, desc))
         made.append((fmt, a, b, name))
     return made
 

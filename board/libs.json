@@ -65,7 +65,9 @@
    "timeout": 120,
    "mem_mb": 4000,
    "question": "Which Python OCR engine reads the most words correctly?",
-   "lead": "real-world images with known text: 80 receipt photos, 50 document pages and 60 app screenshots"
+   "lead": "real-world images with known text: 80 receipt photos, 50 document pages and 60 app screenshots",
+   "noun": "images",
+   "vs_question": "which OCR engine reads more words correctly?"
   }
  },
  "libs": [
