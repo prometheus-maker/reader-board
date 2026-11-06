@@ -223,3 +223,73 @@ def doctr_ocr(path):
         _CACHE["doctr"] = ocr_predictor(pretrained=True)
     from doctr.io import DocumentFile
     return _score(_CACHE["doctr"](DocumentFile.from_images(path)).render(), path)
+
+
+# --- Speech to text (16 kHz mono WAV clips with the reference transcript next to each: NAME.gt.txt) ---
+# Each engine's documented recipe, English model, CPU. Both texts go through Whisper's English text normalizer
+# (lower case, no punctuation, "twenty" == "20") before scoring:
+#   wer         word error rate: word-level edit distance / reference words (0 = perfect; capped at 1)
+#   word_recall share of reference words found anywhere in the output
+def _asr_score(text, path):
+    from collections import Counter
+    from rapidfuzz.distance import Levenshtein
+    from whisper_normalizer.english import EnglishTextNormalizer
+
+    if "norm" not in _CACHE:
+        _CACHE["norm"] = EnglishTextNormalizer()
+    norm = _CACHE["norm"]
+    hyp, ref = norm(text).split(), norm(_truth(path)).split()
+    wer = min(1.0, Levenshtein.distance(hyp, ref) / max(1, len(ref)))
+    recall = sum((Counter(ref) & Counter(hyp)).values()) / max(1, len(ref))
+    return {"text": text, "metrics": {"wer": round(wer, 4), "word_recall": round(recall, 4)}}
+
+
+def whisper_asr(path):
+    if "whisper" not in _CACHE:
+        import whisper
+        _CACHE["whisper"] = whisper.load_model("base.en", device="cpu")
+    return _asr_score(_CACHE["whisper"].transcribe(path, fp16=False, language="en")["text"], path)
+
+
+def faster_whisper_asr(path):
+    if "fw" not in _CACHE:
+        from faster_whisper import WhisperModel
+        _CACHE["fw"] = WhisperModel("base.en", device="cpu", compute_type="int8")
+    segments, _ = _CACHE["fw"].transcribe(path, language="en")
+    return _asr_score(" ".join(s.text for s in segments), path)
+
+
+def whispercpp_asr(path):
+    if "wcpp" not in _CACHE:
+        from pywhispercpp.model import Model
+        _CACHE["wcpp"] = Model("base.en", print_progress=False, print_realtime=False)
+    return _asr_score(" ".join(s.text for s in _CACHE["wcpp"].transcribe(path)), path)
+
+
+def vosk_asr(path):
+    import json
+    import wave
+    import vosk
+    if "vosk" not in _CACHE:
+        vosk.SetLogLevel(-1)
+        _CACHE["vosk"] = vosk.Model(lang="en-us")
+    with wave.open(path, "rb") as w:
+        rec = vosk.KaldiRecognizer(_CACHE["vosk"], w.getframerate())
+        parts = []
+        while data := w.readframes(4000):
+            if rec.AcceptWaveform(data):
+                parts.append(json.loads(rec.Result())["text"])
+        parts.append(json.loads(rec.FinalResult())["text"])
+    return _asr_score(" ".join(p for p in parts if p), path)
+
+
+def moonshine_asr(path):
+    import moonshine_onnx
+    return _asr_score(" ".join(moonshine_onnx.transcribe(path, "moonshine/base")), path)
+
+
+def parakeet_asr(path):
+    if "parakeet" not in _CACHE:
+        import onnx_asr
+        _CACHE["parakeet"] = onnx_asr.load_model("nemo-parakeet-tdt-0.6b-v2")
+    return _asr_score(_CACHE["parakeet"].recognize(path), path)
