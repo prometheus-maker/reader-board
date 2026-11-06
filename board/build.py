@@ -84,11 +84,11 @@ CSS = """
 @media (prefers-color-scheme:dark){:root{--fg:#ececec;--mut:#a0a0a0;--bg:#161616;--card:#1f1f1f;--line:#333;
 --acc:#fb923c;--code:#262626;--good:#4ade80;--bad:#f87171;--warn:#fbbf24;--goodbg:#14532d;--badbg:#7f1d1d;--warnbg:#713f12}}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,-apple-system,
-"Segoe UI",Roboto,sans-serif}main{max-width:980px;margin:0 auto;padding:28px 18px 64px}a{color:var(--acc)}
+"Segoe UI",Roboto,sans-serif}main{max-width:1120px;margin:0 auto;padding:28px 18px 64px}a{color:var(--acc)}
 h1{font-size:30px;line-height:1.2;margin:6px 0 6px}h2{font-size:22px;margin:34px 0 4px}h3{font-size:17px;margin:22px 0 6px}
-.mut{color:var(--mut);font-size:14px}.lead{font-size:18px;margin:4px 0 14px}
+.mut{color:var(--mut);font-size:14px}.lead{font-size:18px;margin:4px 0 14px;max-width:800px}ul{max-width:820px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:6px 14px 10px;margin:10px 0;overflow-x:auto}
-table{border-collapse:collapse;width:100%;font-size:15px}th,td{border-bottom:1px solid var(--line);padding:7px 8px;
+table{border-collapse:collapse;width:100%;font-size:15px}th,td{border-bottom:1px solid var(--line);padding:7px 6px;
 text-align:right;white-space:nowrap}th{font-size:13px;color:var(--mut);font-weight:600}td:first-child,th:first-child{text-align:left}
 tr:last-child td{border-bottom:0}.rank{color:var(--mut);width:1.5em}.lib{font-weight:700}.ver{color:var(--mut);font-weight:400;font-size:13px}
 .pill{display:inline-block;min-width:2.4em;text-align:center;border-radius:99px;padding:1px 8px;font-weight:700}
@@ -156,9 +156,9 @@ def build(out):
             last = hist[-1] if hist else None
             note = ""
             if last and (last["broke"] or last["fixed"]):
-                note = (f'<div class="chg">since {esc(last["from"])}: '
-                        f'<span class="down">{len(last["broke"])} newly failing</span>, '
-                        f'<span class="up">{len(last["fixed"])} fixed</span></div>')
+                parts = ([f'<span class="down">▼ {len(last["broke"])} newly failing</span>'] if last["broke"] else []) + \
+                        ([f'<span class="up">▲ {len(last["fixed"])} fixed</span>'] if last["fixed"] else [])
+                note = f'<div class="chg">since {esc(last["from"])}: {", ".join(parts)}</div>'
             killed = c["hang"] + c["crash"] + c["memory"]
             trs.append(
                 f'<tr><td><span class="rank">{i}</span> <a class="lib" href="{slug(fmt, lib)}">{esc(lib)}</a> '
