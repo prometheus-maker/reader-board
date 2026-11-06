@@ -41,7 +41,9 @@
    "fmt": "pdf",
    "pkg": "pypdf",
    "fn": "pypdf_text",
-   "extra": []
+   "extra": [
+    "pypdf[full]"
+   ]
   },
   {
    "id": "pdfminer.six",

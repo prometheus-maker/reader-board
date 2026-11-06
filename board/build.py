@@ -166,7 +166,7 @@ def build(out):
                 f'<td>{pill(c["fail_readable"], "b")}</td><td>{pill(c["empty_readable"], "w")}</td>'
                 f'<td>{pill(killed, "b")}</td>'
                 f'<td>{c["text"]}</td><td>{c["error"]}</td>'
-                f'<td>{c["median_ms"] if c["median_ms"] is not None else "–"}</td><td>{c["total_s"]:,}</td></tr>')
+                f'<td>{"–" if c["median_ms"] is None else "&lt;1" if c["median_ms"] < 1 else round(c["median_ms"])}</td><td>{c["total_s"]:,}</td></tr>')
             write_lib_page(out, fmt, fcfg, commit, lib, ver, meta, rows, c, fails, empties, hist, len(readable))
         sections.append(f"""<h2 id="{fmt}">{esc(fcfg['title'])}</h2>
 <div class="mut">{len(files):,} files from <a href="https://github.com/{'mozilla/pdf.js' if fcfg['corpus'] == 'pdfjs' else 'apache/poi'}/tree/{commit}" target="_blank" rel="noopener">{esc(CFG['corpora'][fcfg['corpus']]['title'])}</a>;
@@ -186,7 +186,8 @@ see every file it failed on, with the error, and what changed between its versio
 <h2>How this is measured</h2>
 <ul>
 <li>Each library runs a short recipe from its own docs (<a href="{REPO}/blob/main/board/targets.py">board/targets.py</a>):
-open the file, get all text. One worker process per CPU, {int(CFG.get('timeout_s', 60))} s per file, killed above 3 GB.</li>
+open the file, get all text. Installed with the extras the docs recommend for reading
+(<code>pypdf[full]</code>: AES decryption, Brotli), nothing else. One worker process per CPU, {int(CFG.get('timeout_s', 60))} s per file, killed above 3 GB.</li>
 <li><b>Fails where another reads</b>: the library raised an error, hung or crashed on a file from which another library
 in the same table got text. Files that every library fails on (encrypted, truncated, fuzzed) are not counted against anyone.</li>
 <li><b>Empty where another reads</b>: no error, but no text. This is often the recipe, not the library: for example
