@@ -81,7 +81,10 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: r-${{ matrix.fmt }}-${{ matrix.lib }}-${{ matrix.version }}
-          path: results/
+          # only this run's two files: the checkout also holds older results, which must not overwrite newer ones
+          path: |
+            results/${{ matrix.fmt }}/${{ matrix.lib }}/${{ matrix.version }}.jsonl.gz
+            results/${{ matrix.fmt }}/${{ matrix.lib }}/${{ matrix.version }}.json
 
   publish:
     needs: [plan, run]
