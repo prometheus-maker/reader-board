@@ -346,3 +346,64 @@ def fastlangdetect_lid(path):
     if isinstance(r, list):
         r = r[0] if r else {}
     return _lang_score(r.get("lang"), path)
+
+
+# --- PDF to Markdown quality (olmOCR-bench pages; checks in the corpus's *.jsonl, scored by board/olmo) ---
+# Each tool's documented one-call recipe with default settings. A page passes a check when the Markdown contains the
+# expected text, leaves out headers/footers, keeps reading order or table cell neighbours (olmOCR-bench's own checks).
+# olmOCR-bench's check files; arxiv_math and old_scans_math are left out: math checks need KaTeX in a browser
+_OLMO_CATS = ("headers_footers", "long_tiny_text", "multi_column", "old_scans", "table_tests")
+
+
+def _olmo_score(md, path):
+    import os
+    if "olmo" not in _CACHE:
+        from olmo.tests import load_tests  # board/olmo (corpusdiff puts this file's folder on the path)
+        root = os.path.dirname(os.path.abspath(path))
+        while not os.path.exists(os.path.join(root, "multi_column.jsonl")) and root != "/":
+            root = os.path.dirname(root)
+        index = {}
+        for cat in _OLMO_CATS:
+            for t in load_tests(os.path.join(root, f"{cat}.jsonl")):
+                index.setdefault(t.pdf, []).append(t)
+        _CACHE["olmo"] = (os.path.join(root, "pdfs"), index)
+    pdfs, index = _CACHE["olmo"]
+    tests = index.get(os.path.relpath(os.path.abspath(path), pdfs), [])
+    passed = sum(1 for t in tests if t.run(md or "")[0])
+    return {"text": md, "metrics": {"passed": passed, "checks": len(tests),
+                                    "pass_rate": round(passed / len(tests), 4) if tests else 0.0}}
+
+
+def pymupdf4llm_md(path):
+    import pymupdf4llm
+    return _olmo_score(pymupdf4llm.to_markdown(path), path)
+
+
+def markitdown_md(path):
+    if "md" not in _CACHE:
+        from markitdown import MarkItDown
+        _CACHE["md"] = MarkItDown()
+    return _olmo_score(_CACHE["md"].convert(path).markdown, path)
+
+
+def docling_md(path):
+    if "docling" not in _CACHE:
+        from docling.document_converter import DocumentConverter
+        _CACHE["docling"] = DocumentConverter()
+    return _olmo_score(_CACHE["docling"].convert(path).document.export_to_markdown(), path)
+
+
+def kreuzberg_md(path):
+    import kreuzberg
+    cfg = kreuzberg.ExtractionConfig(output_format="markdown")
+    return _olmo_score(kreuzberg.extract_file_sync(path, config=cfg).content, path)
+
+
+def marker_md(path):
+    if "marker" not in _CACHE:
+        from marker.converters.pdf import PdfConverter
+        from marker.models import create_model_dict
+        _CACHE["marker"] = PdfConverter(artifact_dict=create_model_dict())
+    from marker.output import text_from_rendered
+    text, _, _ = text_from_rendered(_CACHE["marker"](path))
+    return _olmo_score(text, path)
