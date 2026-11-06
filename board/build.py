@@ -98,7 +98,7 @@ def accuracy(rows):
         w = WORST.get(k, 0.0)
         vals = [r.get("metrics", {}).get(k, w) if kind(r) == "text" else w for r in rows.values()]
         out[k] = round(sum(vals) / len(vals), 4)
-    if any("ref_words" in r.get("metrics", {}) for r in rows.values()) or "wer" in keys:
+    if any(f in REF_WORDS for f in rows):  # speech: some library reported reference word counts for these files
         err = den = 0
         for f, r in rows.items():
             n = REF_WORDS.get(f)
@@ -243,7 +243,7 @@ def build(out):
                 f'<span class="ver">{esc(ver)}{" (" + esc(meta["engine"]) + ")" if meta.get("engine") else ""}{lib_model(fmt, lib)}</span>{note}{lib_note(fmt, lib)}</td>'
                 f'<td>{pill(c["fail_readable"], "b")}</td><td>{pill(c["empty_readable"], "w")}</td>'
                 f'<td>{pill(killed, "b")}</td>'
-                f'<td>{c["text"]}</td><td>{c["error"]}</td>'
+                + ("" if fcfg.get("scored") else f'<td>{c["text"]}</td><td>{c["error"]}</td>')
                 + (f'<td>{c["unsupported"]}</td>' if fcfg.get("per_ext") else "")
                 + (f'<td><b>{pct(c.get(score(fcfg)["key"]))}</b></td>' if fcfg.get("scored") else "")
                 + f'<td>{"–" if c["median_ms"] is None else "&lt;1" if c["median_ms"] < 1 else round(c["median_ms"])}</td><td>{c["total_s"]:,}</td></tr>')
@@ -253,7 +253,7 @@ def build(out):
 <div class="mut">{len(files):,} files from <a href="https://github.com/{CFG['corpora'][fcfg['corpus']]['repo']}/tree/{commit}" target="_blank" rel="noopener">{esc(CFG['corpora'][fcfg['corpus']]['title'])}</a>;
 {len(readable):,} of them give text to at least one library.</div>
 <div class="card"><table><tr><th>Library</th><th>🔴 Fails where<br>another reads</th><th>🟡 Empty where<br>another reads</th>
-<th>⏱ Hangs or<br>crashes</th><th>Text from<br>(all files)</th><th>Errors<br>(all files)</th>{'<th>Format not<br>supported</th>' if fcfg.get('per_ext') else ''}{'<th>' + score(fcfg)['th'] + '</th>' if fcfg.get('scored') else ''}<th>Median<br>ms/file</th><th>Total<br>seconds</th></tr>
+<th>⏱ Hangs or<br>crashes</th>{'' if fcfg.get('scored') else '<th>Text from<br>(all files)</th><th>Errors<br>(all files)</th>'}{'<th>Format not<br>supported</th>' if fcfg.get('per_ext') else ''}{'<th>' + score(fcfg)['th'] + '</th>' if fcfg.get('scored') else ''}<th>Median<br>ms/file</th><th>Total<br>seconds</th></tr>
 {''.join(trs)}</table></div>{ext_matrix(table, files) if fcfg.get('per_ext') else ''}{group_matrix(table, files, fcfg) if fcfg.get('scored') else ''}"""))
     built = time.strftime("%d %B %Y", time.gmtime())
     method = method_html()
@@ -530,6 +530,11 @@ switched on by hand.</li>
 that appear anywhere in the engine's output (reading order doesn't matter); an image that fails or comes back empty counts as 0. The ground truth of
 receipts and document pages covers only their annotated text, so a character error rate would punish engines for reading
 more than was annotated; it is in the raw results but not ranked. English models, CPU, default settings.</li>
+<li><b>Speech</b>: each clip comes with its dataset's reference transcript. Both texts go through Whisper's English
+text normalizer (case, punctuation, "twenty" = "20"); <b>word error rate</b> is all substituted, missing and extra
+words over all reference words, the usual corpus-level WER. A clip that fails or comes back empty counts all its words
+as errors. The three Whisper implementations use the same base.en model; each other engine its documented default
+model. English, CPU, default decoding settings.</li>
 <li>Text <i>quality</i> (order, tables, layout) is not ranked in the other tables; they are about not breaking. The raw results
 have every output's size and hash.</li>
 <li>Same files for every version: the test collections are pinned to one commit. GitHub-hosted runner, so times are
