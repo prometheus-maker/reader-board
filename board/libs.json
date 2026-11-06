@@ -14,6 +14,11 @@
    "commit": "52aaa53b3ff94677757ff326b669f05c57357240",
    "title": "Apache Tika test documents",
    "repo": "apache/tika"
+  },
+  "ocr": {
+   "commit": "df02f9339f2450cf26bb825ba23648c8e3c6152d",
+   "title": "OCR test set (CORD receipts, DocLayNet pages, app screenshots)",
+   "repo": "prometheus-maker/ocr-testset"
   }
  },
  "formats": {
@@ -50,6 +55,17 @@
    "per_ext": true,
    "mem_mb": 6000,
    "question": "Which Python tool turns the most kinds of documents into text for AI (RAG)?"
+  },
+  "ocr": {
+   "corpus": "ocr",
+   "ext": "jpg,png",
+   "title": "OCR (image → text)",
+   "blob": "https://github.com/prometheus-maker/ocr-testset/blob/{commit}/{path}",
+   "scored": true,
+   "timeout": 120,
+   "mem_mb": 4000,
+   "question": "Which Python OCR engine reads the most words correctly?",
+   "lead": "real-world images with known text: 80 receipt photos, 50 document pages and 60 app screenshots"
   }
  },
  "libs": [
@@ -242,6 +258,69 @@
    "extra": [],
    "apt": "tesseract-ocr tesseract-ocr-eng",
    "unsupported": "ValidationError: [a-z]+/[-+.\\w]+$"
+  },
+  {
+   "id": "Tesseract",
+   "fmt": "ocr",
+   "pkg": "pytesseract",
+   "fn": "tesseract_ocr",
+   "extra": [],
+   "also": [
+    "pillow",
+    "rapidfuzz"
+   ],
+   "apt": "tesseract-ocr tesseract-ocr-eng",
+   "jobs": 1
+  },
+  {
+   "id": "EasyOCR",
+   "fmt": "ocr",
+   "pkg": "easyocr",
+   "fn": "easyocr_ocr",
+   "extra": [],
+   "also": [
+    "rapidfuzz",
+    "--extra-index-url https://download.pytorch.org/whl/cpu"
+   ],
+   "jobs": 1
+  },
+  {
+   "id": "RapidOCR",
+   "fmt": "ocr",
+   "pkg": "rapidocr",
+   "fn": "rapidocr_ocr",
+   "extra": [],
+   "also": [
+    "onnxruntime",
+    "rapidfuzz"
+   ],
+   "jobs": 1
+  },
+  {
+   "id": "PaddleOCR",
+   "fmt": "ocr",
+   "pkg": "paddleocr",
+   "fn": "paddleocr_ocr",
+   "extra": [],
+   "also": [
+    "paddlepaddle",
+    "rapidfuzz"
+   ],
+   "jobs": 1
+  },
+  {
+   "id": "docTR",
+   "fmt": "ocr",
+   "pkg": "python-doctr",
+   "fn": "doctr_ocr",
+   "extra": [
+    "python-doctr[torch]"
+   ],
+   "also": [
+    "rapidfuzz",
+    "--extra-index-url https://download.pytorch.org/whl/cpu"
+   ],
+   "jobs": 1
   }
  ],
  "compare": [
@@ -262,6 +341,14 @@
   ["docx", "mammoth", "python-docx"],
   ["docx", "markitdown", "python-docx"],
   ["xlsx", "openpyxl", "python-calamine"],
-  ["pptx", "python-pptx", "markitdown"]
+  ["pptx", "python-pptx", "markitdown"],
+  ["ocr", "EasyOCR", "Tesseract"],
+  ["ocr", "PaddleOCR", "Tesseract"],
+  ["ocr", "EasyOCR", "PaddleOCR"],
+  ["ocr", "RapidOCR", "PaddleOCR"],
+  ["ocr", "RapidOCR", "Tesseract"],
+  ["ocr", "EasyOCR", "RapidOCR"],
+  ["ocr", "docTR", "PaddleOCR"],
+  ["ocr", "docTR", "Tesseract"]
  ]
 }

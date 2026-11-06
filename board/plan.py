@@ -42,7 +42,7 @@ def main():
                 "install": " ".join([f"{e}=={v}" for e in (lib["extra"] or [lib["pkg"]])] + lib.get("also", [])),
                 "corpus": f["corpus"], "commit": CFG["corpora"][f["corpus"]]["commit"], "ext": f["ext"],
                 "apt": lib.get("apt", ""), "jobs": lib.get("jobs", 4), "timeout": f.get("timeout", 60),
-                "mem_mb": f.get("mem_mb", 3000),
+                "mem_mb": f.get("mem_mb", 3000), "warmup": bool(f.get("scored")),
             })
     print(json.dumps({"include": todo}))
 
