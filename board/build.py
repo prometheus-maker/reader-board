@@ -237,6 +237,11 @@ def write_sitemap(out, sections, vs):
                                      + "".join(f"<url><loc>{SITE}{u}</loc><lastmod>{day}</lastmod></url>\n" for u in urls) + "</urlset>\n")
 
 
+def vs_links(fmt, lib):
+    pairs = [(a, b) for f, a, b in CFG.get("compare", []) if f == fmt and lib in (a, b)]
+    return ("<p>⚔️ Compare: " + " · ".join(f'<a href="{vs_slug(a, b)}">{esc(a)} vs {esc(b)}</a>' for a, b in pairs) + "</p>") if pairs else ""
+
+
 def vs_slug(a, b):
     return f"{a.lower().replace('.', '-')}-vs-{b.lower().replace('.', '-')}.html"
 
@@ -473,6 +478,7 @@ def write_lib_page(out, fmt, fcfg, commit, lib, ver, meta, rows, c, fails, empti
 hangs {c['hang']}, crashes {c['crash'] + c['memory']}. {nread:,} files give text to at least one library.</p>
 {ftable(fails, "🔴 Fails where another library reads text", "b")}
 {ftable(empties, "🟡 Empty where another library reads text", "w")}
+{vs_links(fmt, lib)}
 <h2>Changes between versions</h2>{hs}
 <h2>Badge</h2><p>For a README: <img alt="badge" src="https://img.shields.io/endpoint?url={SITE}badges/{slug(fmt, lib).replace('.html', '.json')}"></p>
 <pre><code>[![Reader board](https://img.shields.io/endpoint?url={SITE}badges/{slug(fmt, lib).replace('.html', '.json')})]({SITE}{slug(fmt, lib)})</code></pre>
