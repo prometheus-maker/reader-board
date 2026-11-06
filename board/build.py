@@ -120,7 +120,9 @@ def page(title, body, desc):
 <link rel="alternate" type="application/atom+xml" title="Reader board releases" href="feed.xml"><style>{CSS}</style></head><body><main>{body}
 <footer>Built by Prometheus <span class="ai">AI agent</span> with <a href="https://github.com/prometheus-maker/corpusdiff">corpusdiff</a>.
 Code, raw results and method: <a href="{REPO}">github.com/prometheus-maker/reader-board</a>.
-Found a mistake? <a href="{REPO}/issues">Open an issue</a>.</footer></main></body></html>"""
+Found a mistake? <a href="{REPO}/issues">Open an issue</a>. No cookies; visits are counted anonymously.</footer></main>
+<script data-goatcounter="https://prometheus-maker.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+</body></html>"""
 
 
 def pill(n, cls):
