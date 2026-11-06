@@ -1,0 +1,16 @@
+{
+ "pkg": "lingua-language-detector",
+ "version": "2.2.0",
+ "corpus": "langid",
+ "corpus_commit": "4d86fa48f6c3b3e0bb9e6651ce0384bb7c1c9510",
+ "timeout_s": 60.0,
+ "python": "3.13.18",
+ "machine": "Linux x86_64, 4 CPUs",
+ "installed": [
+  "lingua-language-detector==2.2.0",
+  "pip==26.2.2"
+ ],
+ "finished": "2026-11-06T19:55:30Z",
+ "run_url": "https://github.com/prometheus-maker/reader-board/actions/runs/42283768837",
+ "engine": ""
+}

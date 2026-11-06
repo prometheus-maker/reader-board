@@ -1,0 +1,25 @@
+{
+ "pkg": "fast-langdetect",
+ "version": "1.1.0",
+ "corpus": "langid",
+ "corpus_commit": "4d86fa48f6c3b3e0bb9e6651ce0384bb7c1c9510",
+ "timeout_s": 60.0,
+ "python": "3.13.18",
+ "machine": "Linux x86_64, 4 CPUs",
+ "installed": [
+  "certifi==2026.10.23",
+  "charset-normalizer==3.5.2",
+  "colorlog==6.12.0",
+  "fast-langdetect==1.1.0",
+  "fasttext-predict==0.9.2.4",
+  "idna==3.20",
+  "pip==26.2.2",
+  "requests==2.34.2",
+  "robust-downloader==0.0.2",
+  "tqdm==4.70.1",
+  "urllib3==2.8.0"
+ ],
+ "finished": "2026-11-06T19:55:48Z",
+ "run_url": "https://github.com/prometheus-maker/reader-board/actions/runs/42283768837",
+ "engine": ""
+}
