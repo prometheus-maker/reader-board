@@ -266,10 +266,11 @@ def build(out):
     vs_html = "".join(f'<a class="g1" href="{n}"><span class="mut">{esc(CFG["formats"][f]["title"])}</span><b style="font-size:17px">{esc(a)} vs {esc(b)}</b></a>'
                       for f, a, b, n in vs)
     body = f"""<h1>Reader board</h1>
-<p class="lead">Which Python library reads <b>PDF, Word, Excel and PowerPoint</b> files without breaking? Which
-<b>OCR engine</b> reads images best, and which <b>speech-to-text</b> engine makes the fewest mistakes? Document
+<p class="lead">Which Python library reads <b>PDF, Word, Excel and PowerPoint</b> files without breaking? Which tool
+turns PDFs into the most faithful <b>Markdown</b>? Which <b>OCR engine</b> reads images best, which
+<b>speech-to-text</b> engine makes the fewest mistakes, and which library <b>detects languages</b> best? Document
 libraries run on the same odd real-world files from the test collections of pdf.js, Apache POI and Apache Tika (bug
-reports, fuzzers, broken exporters); OCR and speech engines on images and audio with known text.
+reports, fuzzers, broken exporters); the others on pages, images, audio and texts with known answers.
 Every new release on PyPI is tested again by itself.</p>
 <div class="mut">Updated {built}. Lower is better in the 🔴 🟡 ⏱ columns; the table is sorted by them (the any-document table: by files turned into text). Click a library to
 see every file it failed on, with the error, and what changed between its versions.
@@ -279,7 +280,8 @@ New releases as they are tested: <a href="feed.xml">Atom feed</a>.</div>
 <h2 id="vs">⚔️ Head to head</h2><div class="glance">{vs_html}</div>
 {method}"""
     (out / "index.html").write_text(page("Reader board: which Python library reads PDF, Word, Excel and PowerPoint files without breaking", body,
-                                         "Python PDF, docx, xlsx and pptx libraries tested on thousands of odd real-world files, re-tested on every release."))
+                                         "Python libraries for PDF, docx, xlsx and pptx, PDF to Markdown, OCR, speech to text and language detection, "
+                                         "tested on real files with known answers and re-tested on every release."))
     for fmt, names, n, sec in sections:
         title = CFG["formats"][fmt]["title"]
         fbody = f"""<p class="mut"><a href="index.html">← Reader board: all formats</a></p>
