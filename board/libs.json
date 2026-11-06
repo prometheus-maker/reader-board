@@ -243,5 +243,25 @@
    "apt": "tesseract-ocr tesseract-ocr-eng",
    "unsupported": "ValidationError: [a-z]+/[-+.\\w]+$"
   }
+ ],
+ "compare": [
+  ["docs", "markitdown", "Docling"],
+  ["docs", "Docling", "Unstructured"],
+  ["docs", "Kreuzberg", "Docling"],
+  ["docs", "markitdown", "Unstructured"],
+  ["docs", "Kreuzberg", "markitdown"],
+  ["docs", "Kreuzberg", "Unstructured"],
+  ["pdf", "PyMuPDF", "pdfplumber"],
+  ["pdf", "pypdf", "PyMuPDF"],
+  ["pdf", "pdfplumber", "pypdf"],
+  ["pdf", "pdfplumber", "pdfminer.six"],
+  ["pdf", "pypdf", "pdfminer.six"],
+  ["pdf", "PyMuPDF", "pypdfium2"],
+  ["pdf", "markitdown", "PyMuPDF"],
+  ["docx", "python-docx", "docx2txt"],
+  ["docx", "mammoth", "python-docx"],
+  ["docx", "markitdown", "python-docx"],
+  ["xlsx", "openpyxl", "python-calamine"],
+  ["pptx", "python-pptx", "markitdown"]
  ]
 }

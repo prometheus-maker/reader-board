@@ -107,8 +107,8 @@ tr:last-child td{border-bottom:0}.rank{color:var(--mut);width:1.5em}.lib{font-we
 .files td{white-space:normal;text-align:left;font-size:14px;vertical-align:top}.files td:first-child{word-break:break-all;width:34%}
 .chg{font-size:14px;margin:2px 0}.up{color:var(--good)}.down{color:var(--bad)}footer{margin-top:44px;color:var(--mut);font-size:14px}
 .glance{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin:10px 0}
-a.g1{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 14px;
-text-decoration:none;color:var(--fg)}a.g1:hover{border-color:var(--acc)}a.g1 b{font-size:20px;color:var(--good)}
+a.g1,div.g1{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 14px;
+text-decoration:none;color:var(--fg)}div.g1 b,a.g1 b{font-size:20px;color:var(--good)}a.g1:hover{border-color:var(--acc)}a.g1 b{font-size:20px;color:var(--good)}
 .ai{font-size:12px;font-weight:600;background:var(--code);border:1px solid var(--line);border-radius:99px;padding:2px 9px;color:var(--mut)}
 """
 
@@ -195,6 +195,9 @@ def build(out):
 {''.join(trs)}</table></div>{ext_matrix(table, files) if fcfg.get('per_ext') else ''}"""))
     built = time.strftime("%d %B %Y", time.gmtime())
     method = method_html()
+    vs = write_vs_pages(out, runs)
+    vs_html = "".join(f'<a class="g1" href="{n}"><span class="mut">{esc(CFG["formats"][f]["title"])}</span><b style="font-size:17px">{esc(a)} vs {esc(b)}</b></a>'
+                      for f, a, b, n in vs)
     body = f"""<h1>Reader board</h1>
 <p class="lead">Which Python library reads <b>PDF, Word, Excel and PowerPoint</b> files without breaking? Each one runs on
 {nfiles:,} odd real-world files from the test collections of pdf.js and Apache POI: files from bug reports, fuzzers and
@@ -204,6 +207,7 @@ see every file it failed on, with the error, and what changed between its versio
 New releases as they are tested: <a href="feed.xml">Atom feed</a>.</div>
 <h2>🏆 Best per format</h2><div class="glance">{''.join(glance)}</div>
 {''.join(x[3] for x in sections)}
+<h2 id="vs">⚔️ Head to head</h2><div class="glance">{vs_html}</div>
 {method}"""
     (out / "index.html").write_text(page("Reader board: which Python library reads PDF, Word, Excel and PowerPoint files without breaking", body,
                                          "Python PDF, docx, xlsx and pptx libraries tested on thousands of odd real-world files, re-tested on every release."))
@@ -221,6 +225,110 @@ New PyPI releases are tested again by themselves. Updated {built}.</p>
     (out / ".nojekyll").write_text("")
     write_badges(out, summary)
     write_feed(out, runs)
+    write_sitemap(out, sections, vs)
+
+
+def write_sitemap(out, sections, vs):
+    day = time.strftime("%Y-%m-%d", time.gmtime())
+    urls = ["", *(f"{x[0]}.html" for x in sections), *(n for *_, n in vs),
+            *sorted(p.name for p in out.glob("*.html") if p.name not in {"index.html"} and "-vs-" not in p.name
+                    and p.stem not in {x[0] for x in sections})]
+    (out / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+                                     + "".join(f"<url><loc>{SITE}{u}</loc><lastmod>{day}</lastmod></url>\n" for u in urls) + "</urlset>\n")
+
+
+def vs_slug(a, b):
+    return f"{a.lower().replace('.', '-')}-vs-{b.lower().replace('.', '-')}.html"
+
+
+def write_vs_pages(out, runs):
+    """One head-to-head page per pair in libs.json "compare" (the comparisons people search for), built from the
+    same results as the tables. Returns [(fmt, a, b, slug)] for the index."""
+    made = []
+    built = time.strftime("%d %B %Y", time.gmtime())
+    for fmt, a, b in CFG.get("compare", []):
+        libs = runs.get(fmt, {})
+        if a not in libs or b not in libs:
+            continue
+        fcfg = CFG["formats"][fmt]
+        commit = CFG["corpora"][fcfg["corpus"]]["commit"]
+        (va, ma, ra), (vb, mb, rb) = libs[a][-1], libs[b][-1]
+        files = sorted(set(ra) & set(rb))
+        bad = ("error", "hang", "crash", "memory")
+        ka = {f: kind(ra[f]) for f in files}
+        kb = {f: kind(rb[f]) for f in files}
+        both = [f for f in files if ka[f] == "text" and kb[f] == "text"]
+        only_a = [f for f in files if ka[f] == "text" and kb[f] != "text"]
+        only_b = [f for f in files if kb[f] == "text" and ka[f] != "text"]
+        ca, _, _ = stats({f: ra[f] for f in files}, set())
+        cb, _, _ = stats({f: rb[f] for f in files}, set())
+        fa = sum(ka[f] in bad for f in only_b)  # a breaks where b reads
+        fb = sum(kb[f] in bad for f in only_a)
+        ta, tb = ca["text"], cb["text"]
+        more = a if ta > tb else b if tb > ta else None
+        sa, sb = ca["total_s"], cb["total_s"]
+        fast, slow_, fs, ss = (a, b, sa, sb) if sa <= sb else (b, a, sb, sa)
+        ratio = f"{ss / fs:,.0f}× faster" if fs > 0 and ss / fs >= 1.5 else "about as fast"
+        verdict = (f"<b>{esc(more)}</b> got text from more files: {max(ta, tb):,} vs {min(ta, tb):,} of {len(files):,}."
+                   if more else f"Both got text from {ta:,} of {len(files):,} files.")
+        repo = CFG["corpora"][fcfg["corpus"]]["repo"]
+
+        def link(f):
+            if "{treepath}" in fcfg["blob"]:
+                tp = tree_paths(repo, commit).get(f)
+                url = fcfg["blob"].format(commit=commit, treepath=tp) if tp else f"https://github.com/{repo}/tree/{commit}"
+            else:
+                url = fcfg["blob"].format(commit=commit, path=f)
+            return f'<a href="{esc(url)}" target="_blank" rel="noopener">{esc(f)}</a>'
+
+        def what(r):
+            k = kind(r)
+            return {"empty": "no text", "unsupported": "format not supported", "missing": "not run"}.get(k) or why(r)
+
+        def flist(fs, rows_other, name_other, cap=40):
+            if not fs:
+                return "<p class='mut'>None.</p>"
+            trs = "".join(f"<tr><td>{link(f)}</td><td>{esc(name_other)}: {esc(what(rows_other[f]))}</td></tr>" for f in fs[:cap])
+            more_ = f"<p class='mut'>…and {len(fs) - cap} more: see each library's page.</p>" if len(fs) > cap else ""
+            return f'<div class="card"><table class="files">{trs}</table></div>{more_}'
+
+        def bucket(fs, k):
+            return sum(1 for f in fs if k(f))
+
+        rows_t = "".join(
+            f"<tr><td><a class='lib' href='{slug(fmt, n)}'>{esc(n)}</a> <span class='ver'>{esc(v)}</span></td>"
+            f"<td>{c['text']:,}</td><td>{pill(bucket(o, lambda f, kk=kk: kk[f] in bad), 'b')}</td>"
+            f"<td>{pill(bucket(o, lambda f, kk=kk: kk[f] == 'empty'), 'w')}</td>"
+            f"<td>{c['hang'] + c['crash'] + c['memory']}</td>"
+            + (f"<td>{c['unsupported']}</td>" if fcfg.get("per_ext") else "")
+            + f"<td>{'–' if c['median_ms'] is None else '&lt;1' if c['median_ms'] < 1 else round(c['median_ms'])}</td><td>{c['total_s']:,}</td></tr>"
+            for n, v, c, o, kk in ((a, va, ca, only_b, ka), (b, vb, cb, only_a, kb)))
+        table = [(a, va, ma, {f: ra[f] for f in files}), (b, vb, mb, {f: rb[f] for f in files})]
+        title_f = fcfg["title"]
+        body = f"""<p class="mut"><a href="{fmt}.html">← {esc(title_f)}: all libraries</a> · <a href="index.html">Reader board</a></p>
+<h1>{esc(a)} vs {esc(b)}: which one reads more real-world {esc('documents' if fcfg.get('per_ext') else title_f + ' files')}?</h1>
+<p class="lead">{esc(a)} {esc(va)} and {esc(b)} {esc(vb)} on the same {len(files):,} odd real-world files from
+<a href="https://github.com/{repo}/tree/{commit}" target="_blank" rel="noopener">{esc(CFG['corpora'][fcfg['corpus']]['title'])}</a>
+(bug reports, fuzzers, broken exporters). Measured, not opinion; re-tested by itself on every new PyPI release. Updated {built}.</p>
+<div class="glance"><div class="g1"><span class="mut">More files read</span><b>{esc(more or 'tie')}</b><span class="mut">{ta:,} vs {tb:,}</span></div>
+<div class="g1"><span class="mut">Faster on this set</span><b>{esc(fast)}</b><span class="mut">{fs:,} s vs {ss:,} s total ({ratio})</span></div>
+<div class="g1"><span class="mut">Both read</span><b>{len(both):,}</b><span class="mut">only {esc(a)}: {len(only_a)} · only {esc(b)}: {len(only_b)}</span></div></div>
+<p>{verdict} {esc(a)} broke (error, hang or crash) on {fa} files that {esc(b)} read; {esc(b)} broke on {fb} files that {esc(a)} read.</p>
+<div class="card"><table><tr><th>Library</th><th>Text from</th><th>🔴 Fails where<br>the other reads</th><th>🟡 Empty where<br>the other reads</th><th>⏱ Hangs or<br>crashes</th>{'<th>Format not<br>supported</th>' if fcfg.get('per_ext') else ''}<th>Median<br>ms/file</th><th>Total<br>seconds</th></tr>{rows_t}</table></div>
+{ext_matrix(table, files) if fcfg.get('per_ext') else ''}
+<h2>Files only {esc(a)} reads ({len(only_a)})</h2>{flist(only_a, rb, b)}
+<h2>Files only {esc(b)} reads ({len(only_b)})</h2>{flist(only_b, ra, a)}
+<h2>What this does not tell you</h2>
+<p>This compares <b>not breaking</b>: whether each library gets any text out of each file. It does not rank text quality
+(reading order, tables, headings), and speed is one GitHub-hosted runner, default settings, no OCR switched on.
+If you need structure for RAG, also look at the output on your own files.</p>
+{method_html()}"""
+        name = vs_slug(a, b)
+        (out / name).write_text(page(f"{a} vs {b}: tested on {len(files):,} real-world files ({built[-4:]})", body,
+                                     f"{a} vs {b}, measured: text from {ta:,} vs {tb:,} of {len(files):,} odd real-world "
+                                     f"{'documents' if fcfg.get('per_ext') else title_f + ' files'}; {fast} {ratio}. Re-tested on every release."))
+        made.append((fmt, a, b, name))
+    return made
 
 
 SITE = "https://prometheus-maker.github.io/reader-board/"
