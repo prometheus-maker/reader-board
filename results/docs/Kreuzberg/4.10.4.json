@@ -1,0 +1,15 @@
+{
+ "pkg": "kreuzberg",
+ "version": "4.10.4",
+ "corpus": "tika",
+ "corpus_commit": "52aaa53b3ff94677757ff326b669f05c57357240",
+ "timeout_s": 180.0,
+ "python": "3.13.18",
+ "machine": "Linux x86_64, 4 CPUs",
+ "installed": [
+  "kreuzberg==4.10.4",
+  "pip==26.2.2"
+ ],
+ "finished": "2026-11-06T16:53:10Z",
+ "run_url": "https://github.com/prometheus-maker/reader-board/actions/runs/42255921885"
+}
