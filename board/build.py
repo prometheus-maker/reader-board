@@ -166,6 +166,9 @@ tr:last-child td{border-bottom:0}.rank{color:var(--mut);width:1.5em}.lib{font-we
 .z{color:var(--mut)}code{font:13px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code);padding:1px 4px;border-radius:4px}
 .files td{white-space:normal;text-align:left;font-size:14px;vertical-align:top}.files td:first-child{word-break:break-all;width:34%}
 .chg{font-size:14px;margin:2px 0}.up{color:var(--good)}.down{color:var(--bad)}footer{margin-top:44px;color:var(--mut);font-size:14px}
+.try{display:flex;gap:16px;align-items:flex-start;margin:22px 0;padding:16px 20px;border-radius:16px;text-decoration:none;color:var(--fg);background:var(--card);border:1px solid var(--line)}
+.try:hover{border-color:var(--acc)}.try .ic{flex:0 0 44px;height:44px;border-radius:12px;display:grid;place-items:center;font-size:22px;background:var(--line)}
+.try small{display:block;color:var(--mut);font-size:13px}.try b{display:block;font-size:18px;color:var(--acc);margin:2px 0 4px}.try span span{display:block;color:var(--mut);font-size:15px;line-height:1.5}
 .glance{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin:10px 0}
 a.g1,div.g1{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 14px;
 text-decoration:none;color:var(--fg)}div.g1 b,a.g1 b{font-size:20px;color:var(--acc)}a.g1:hover{border-color:var(--acc)}a.g1 b{font-size:20px;color:var(--acc)}
@@ -297,6 +300,7 @@ test files: bug reports, fuzzer output, broken exporters, and pages, images and 
 <div class="mut" style="margin-top:14px">Lower is better in the 🔴 🟡 ⏱ columns. Click a library to see every file it failed on, with the error,
 and what changed between versions. New releases as they're tested: <a href="feed.xml">Atom feed</a>.</div>
 <h2>🏆 Best per format</h2><div class="glance">{''.join(glance)}</div>
+{yours(CFG["formats"]["pdf"])}
 {''.join(x[3] for x in sections)}
 <h2 id="vs">⚔️ Head to head</h2><div class="glance">{vs_html}</div>
 {method}"""
@@ -310,6 +314,7 @@ and what changed between versions. New releases as they're tested: <a href="feed
 <p class="lead">{esc(names)}: each one tested on the same {n:,} {esc(CFG["formats"][fmt].get("lead") or f'odd real-world {title if not CFG["formats"][fmt].get("per_ext") else ""} files from bug reports and fuzzers')}.
 New PyPI releases are tested again by themselves. Updated {built}.</p>
 {sec.replace(f'<h2 id="{fmt}">{esc(title)}</h2>', '', 1)}
+{yours(CFG["formats"][fmt])}
 {hosted(CFG["formats"][fmt])}
 {method}"""
         (out / f"{fmt}.html").write_text(page(f"{CFG['formats'][fmt].get('question') or f'Python {title} libraries compared on {n:,} broken and odd files:'} ({names})", fbody,
@@ -328,6 +333,16 @@ def write_sitemap(out, sections, vs):
                     and p.stem not in {x[0] for x in sections})]
     (out / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
                                      + "".join(f"<url><loc>{SITE}{u}</loc><lastmod>{day}</lastmod></url>\n" for u in urls) + "</urlset>\n")
+
+
+def yours(fcfg):
+    """Pointer to my tool that runs this table's comparison on the reader's own files (libs.json "yours")."""
+    y = fcfg.get("yours")
+    if not y:
+        return ""
+    return (f'<a class="try" href="{esc(y["url"])}" target="_blank" rel="noopener"><span class="ic">🔬</span><span>'
+            f'<small>Your files are not my files</small><b>{esc(y["name"])} →</b><span>{esc(y["text"])} '
+            f'Runs on Apify, small fee per file. (My tool; the rankings on this page come only from the measurements.)</span></span></a>')
 
 
 def hosted(fcfg):

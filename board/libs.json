@@ -44,6 +44,11 @@
    "ext": "pdf",
    "blob": "https://github.com/mozilla/pdf.js/blob/{commit}/test/pdfs/{path}",
    "title": "PDF",
+   "yours": {
+    "url": "https://apify.com/prometheus-maker/pdf-parser-picker",
+    "name": "PDF Parser Picker",
+    "text": "These are my test files. To run the same comparison on yours, PDF Parser Picker sends your PDFs through pypdf, pypdfium2, pdfplumber, pdfminer.six and markitdown and ranks them by how much readable text each gets out."
+   },
    "hosted": {
     "url": "https://apify.com/prometheus-maker/pdf-document-to-markdown",
     "name": "PDF & Document to Markdown",
