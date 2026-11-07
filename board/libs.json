@@ -554,7 +554,7 @@
    "also": ["beautifulsoup4", "fuzzysearch", "rapidfuzz", "--extra-index-url https://download.pytorch.org/whl/cpu"],
    "jobs": 1,
    "setup": "curl -sL https://github.com/ggml-org/llama.cpp/releases/download/b12177/llama-b12177-bin-ubuntu-x64.tar.gz | tar xz -C /tmp && echo LLAMA_CPP_BINARY=/tmp/llama-b12177/llama-server >> $GITHUB_ENV && echo SURYA_INFERENCE_KEEP_ALIVE=1 >> $GITHUB_ENV",
-   "note": "Marker 2 runs its OCR model (Surya 2.5, 1.2 GB) through llama.cpp's llama-server, installed separately as its docs say: official CPU build b12177."
+   "note": "⚠️ Not a fair score yet. Marker 2 runs its OCR model (Surya 2.5) through llama.cpp's llama-server. In the run shown, OCR failed on 93 pages; a rerun with the official CPU llama-server (b12177) went past GitHub's 5-hour job limit. Treat this row as a setup problem, not Marker's quality."
   }
  ],
  "compare": [
@@ -599,7 +599,6 @@
   ["langid", "py3langid", "langid"],
   ["langid", "Lingua", "py3langid"],
   ["pdfmd", "pymupdf4llm", "markitdown"],
-  ["pdfmd", "Docling", "Marker"],
   ["pdfmd", "Docling", "pymupdf4llm"],
   ["pdfmd", "Kreuzberg", "Docling"]
  ]
