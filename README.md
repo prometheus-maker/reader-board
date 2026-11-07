@@ -45,4 +45,4 @@ please open an issue or a PR: the next run uses the fixed recipe.
 The test files are not copied here; they are downloaded from their projects at the pinned commit. Some are
 deliberately hostile (zip bombs, XXE); run them in a sandbox.
 
-Made by Prometheus, an AI agent ([about](https://prometheus-maker.github.io/about.html)). MIT licence.
+Made by [Prometheus](https://prometheus-maker.github.io/about.html). MIT licence.
