@@ -172,6 +172,20 @@ text-decoration:none;color:var(--fg)}div.g1 b,a.g1 b{font-size:20px;color:var(--
 .ai{display:none}.nav{display:flex;align-items:center;gap:20px;padding:2px 0 14px;border-bottom:1px solid var(--line);font-size:15px}
 .nav a{color:var(--mut);text-decoration:none}.nav a:hover{color:var(--fg)}.nav .brand{display:flex;gap:9px;align-items:center;color:var(--fg);font-weight:750;margin-right:auto}
 td{font-variant-numeric:tabular-nums}tr:hover td{background:color-mix(in srgb,var(--acc) 5%,transparent)}
+.hero{position:relative;padding:34px 0 18px}.hero:before{content:"";position:absolute;right:-120px;top:-120px;width:520px;height:520px;border-radius:50%;
+background:radial-gradient(circle,rgba(255,94,40,.16),transparent 65%);pointer-events:none;z-index:-1}
+.hero h1{font-size:clamp(34px,5.4vw,58px);line-height:1.04;letter-spacing:-.035em;margin:16px 0 12px;max-width:880px}
+.fire{background:linear-gradient(135deg,#FFD84A 0%,#FF9A1F 45%,#FF4D2E 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.lede{font-size:19px;color:var(--mut);max-width:760px;margin:0 0 18px}
+.pill{display:inline-block;font-size:13px;font-weight:650;color:var(--acc);border:1px solid color-mix(in srgb,var(--acc) 45%,transparent);border-radius:99px;padding:4px 12px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}.chips a{font-size:14px;font-weight:600;text-decoration:none;color:var(--fg);background:var(--card);border:1px solid var(--line);border-radius:99px;padding:6px 14px}
+.chips a:hover{border-color:var(--acc)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line);border-radius:16px;background:var(--card);margin:18px 0 6px}
+.stats div{padding:16px 20px;border-left:1px solid var(--line)}.stats div:first-child{border-left:0}
+.stats b{display:block;font-size:26px;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1.15}.stats span{font-size:14px;color:var(--mut)}
+@media (max-width:700px){.stats{grid-template-columns:1fr 1fr}.stats div:nth-child(3){border-left:0}.stats div:nth-child(n+3){border-top:1px solid var(--line)}}
+a.g1,div.g1{padding:14px 16px;border-radius:14px;transition:border-color .15s,transform .15s}a.g1:hover{transform:translateY(-1px)}
+h2{font-size:24px;letter-spacing:-.02em;margin:44px 0 6px}
 """
 
 
@@ -270,14 +284,18 @@ def build(out):
     vs = write_vs_pages(out, runs)
     vs_html = "".join(f'<a class="g1" href="{n}"><span class="mut">{esc(CFG["formats"][f]["title"])}</span><b style="font-size:17px">{esc(a)} vs {esc(b)}</b></a>'
                       for f, a, b, n in vs)
-    body = f"""<h1>Reader board</h1>
-<p class="lead">Which Python library should read your files? Libraries for <b>PDF</b>, <b>Word, Excel and PowerPoint</b>,
-<b>PDF → Markdown</b>, <b>OCR</b>, <b>speech-to-text</b> and <b>language detection</b>, run on thousands of real test files:
-bug reports, fuzzer output and broken exporters, or pages, images and audio with known answers.
-Every new PyPI release is tested again by itself.</p>
-<div class="mut">Updated {built}. Lower is better in the 🔴 🟡 ⏱ columns; the table is sorted by them (the any-document table: by files turned into text). Click a library to
-see every file it failed on, with the error, and what changed between its versions.
-New releases as they are tested: <a href="feed.xml">Atom feed</a>.</div>
+    n_files = sum(n_ for _f, _nm, n_, _s in sections)  # formats never share files (POI is split by extension)
+    n_libs = len({l["id"] for l in CFG["libs"]})
+    chips = "".join(f'<a href="{fmt}.html">{esc(CFG["formats"][fmt]["title"])}</a>' for fmt, *_ in sections)
+    body = f"""<section class="hero"><span class="pill">Open benchmark · re-tested on every release</span>
+<h1>Which Python library should read <span class="fire">your files</span>?</h1>
+<p class="lede">{n_libs} libraries for PDF, Office, PDF → Markdown, OCR, speech and language detection, run on the same real
+test files: bug reports, fuzzer output, broken exporters, and pages, images and audio with known answers.</p>
+<div class="chips">{chips}</div></section>
+<section class="stats"><div><b>{n_files:,}</b><span>real test files</span></div><div><b>{n_libs}</b><span>libraries</span></div>
+<div><b>{len(sections)}</b><span>formats</span></div><div><b>{time.strftime("%-d %b", time.gmtime())}</b><span>last update</span></div></section>
+<div class="mut" style="margin-top:14px">Lower is better in the 🔴 🟡 ⏱ columns. Click a library to see every file it failed on, with the error,
+and what changed between versions. New releases as they're tested: <a href="feed.xml">Atom feed</a>.</div>
 <h2>🏆 Best per format</h2><div class="glance">{''.join(glance)}</div>
 {''.join(x[3] for x in sections)}
 <h2 id="vs">⚔️ Head to head</h2><div class="glance">{vs_html}</div>
