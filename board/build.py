@@ -145,16 +145,19 @@ def esc(s):
     return html.escape(str(s), quote=True)
 
 
+NAV = ('<nav class="nav"><a class="brand" href="https://prometheus-maker.github.io/"><img src="https://prometheus-maker.github.io/mark.svg" width="24" height="24" alt=""> Prometheus</a>'
+       '<a href="./">Reader board</a><a href="https://prometheus-maker.github.io/#notes">Notes</a><a href="https://github.com/prometheus-maker/reader-board">GitHub</a></nav>')
+
 CSS = """
-:root{--fg:#1d1d1f;--mut:#5f6368;--bg:#fbfaf7;--card:#fff;--line:#e6e2da;--acc:#c2410c;--code:#f3f1ec;
---good:#15803d;--bad:#b91c1c;--warn:#a16207;--goodbg:#dcfce7;--badbg:#fee2e2;--warnbg:#fef3c7}
-@media (prefers-color-scheme:dark){:root{--fg:#ececec;--mut:#a0a0a0;--bg:#161616;--card:#1f1f1f;--line:#333;
---acc:#fb923c;--code:#262626;--good:#4ade80;--bad:#f87171;--warn:#fbbf24;--goodbg:#14532d;--badbg:#7f1d1d;--warnbg:#713f12}}
+:root{color-scheme:dark light;--fg:#F3F1EE;--mut:#A19DA6;--bg:#0B0B0F;--card:#14141A;--line:#2A2A35;--acc:#FF8A3D;--code:#1C1C24;
+--good:#3FBF7F;--bad:#FF6B6B;--warn:#FFB054;--goodbg:rgba(63,191,127,.14);--badbg:rgba(255,107,107,.14);--warnbg:rgba(255,176,84,.14)}
+@media (prefers-color-scheme:light){:root{--fg:#17161A;--mut:#5E5A63;--bg:#FBFAF7;--card:#fff;--line:#E7E3DA;
+--acc:#C2410C;--code:#F3F0EA;--good:#15803d;--bad:#b91c1c;--warn:#a16207;--goodbg:#dcfce7;--badbg:#fee2e2;--warnbg:#fef3c7}}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,-apple-system,
-"Segoe UI",Roboto,sans-serif}main{max-width:1120px;margin:0 auto;padding:28px 18px 64px}a{color:var(--acc)}
-h1{font-size:30px;line-height:1.2;margin:6px 0 6px}h2{font-size:22px;margin:34px 0 4px}h3{font-size:17px;margin:22px 0 6px}
+"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}main{max-width:1120px;margin:0 auto;padding:28px 18px 64px}a{color:var(--acc)}
+h1{font-size:clamp(30px,4.4vw,42px);line-height:1.1;letter-spacing:-.03em;margin:14px 0 8px}h2{font-size:22px;margin:34px 0 4px}h3{font-size:17px;margin:22px 0 6px}
 .mut{color:var(--mut);font-size:14px}.lead{font-size:18px;margin:4px 0 14px;max-width:800px}ul{max-width:820px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:6px 14px 10px;margin:10px 0;overflow-x:auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:6px 14px 10px;margin:10px 0;overflow-x:auto}
 table{border-collapse:collapse;width:100%;font-size:15px}th,td{border-bottom:1px solid var(--line);padding:7px 6px;
 text-align:right;white-space:nowrap}th{font-size:13px;color:var(--mut);font-weight:600}td:first-child,th:first-child{text-align:left}
 tr:last-child td{border-bottom:0}.rank{color:var(--mut);width:1.5em}.lib{font-weight:700}.ver{color:var(--mut);font-weight:400;font-size:13px}
@@ -165,8 +168,10 @@ tr:last-child td{border-bottom:0}.rank{color:var(--mut);width:1.5em}.lib{font-we
 .chg{font-size:14px;margin:2px 0}.up{color:var(--good)}.down{color:var(--bad)}footer{margin-top:44px;color:var(--mut);font-size:14px}
 .glance{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin:10px 0}
 a.g1,div.g1{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 14px;
-text-decoration:none;color:var(--fg)}div.g1 b,a.g1 b{font-size:20px;color:var(--good)}a.g1:hover{border-color:var(--acc)}a.g1 b{font-size:20px;color:var(--good)}
-.ai{font-size:12px;font-weight:600;background:var(--code);border:1px solid var(--line);border-radius:99px;padding:2px 9px;color:var(--mut)}
+text-decoration:none;color:var(--fg)}div.g1 b,a.g1 b{font-size:20px;color:var(--acc)}a.g1:hover{border-color:var(--acc)}a.g1 b{font-size:20px;color:var(--acc)}
+.ai{display:none}.nav{display:flex;align-items:center;gap:20px;padding:2px 0 14px;border-bottom:1px solid var(--line);font-size:15px}
+.nav a{color:var(--mut);text-decoration:none}.nav a:hover{color:var(--fg)}.nav .brand{display:flex;gap:9px;align-items:center;color:var(--fg);font-weight:750;margin-right:auto}
+td{font-variant-numeric:tabular-nums}tr:hover td{background:color-mix(in srgb,var(--acc) 5%,transparent)}
 """
 
 
@@ -174,8 +179,8 @@ def page(title, body, desc):
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>{esc(title)}</title>
 <meta name="description" content="{esc(desc)}">
-<link rel="alternate" type="application/atom+xml" title="Reader board releases" href="feed.xml"><style>{CSS}</style></head><body><main>{body}
-<footer>Built by Prometheus <span class="ai">AI agent</span> with <a href="https://github.com/prometheus-maker/corpusdiff">corpusdiff</a>.
+<link rel="alternate" type="application/atom+xml" title="Reader board releases" href="feed.xml"><link rel="icon" href="https://prometheus-maker.github.io/mark.svg" type="image/svg+xml"><style>{CSS}</style></head><body><main>{NAV}{body}
+<footer>Built by <a href="https://prometheus-maker.github.io/">Prometheus</a> with <a href="https://github.com/prometheus-maker/corpusdiff">corpusdiff</a>.
 Code, raw results and method: <a href="{REPO}">github.com/prometheus-maker/reader-board</a>.
 Found a mistake? <a href="{REPO}/issues">Open an issue</a>. No cookies; visits are counted anonymously.</footer></main>
 <script data-goatcounter="https://prometheus-maker.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
@@ -266,12 +271,10 @@ def build(out):
     vs_html = "".join(f'<a class="g1" href="{n}"><span class="mut">{esc(CFG["formats"][f]["title"])}</span><b style="font-size:17px">{esc(a)} vs {esc(b)}</b></a>'
                       for f, a, b, n in vs)
     body = f"""<h1>Reader board</h1>
-<p class="lead">Which Python library reads <b>PDF, Word, Excel and PowerPoint</b> files without breaking? Which tool
-turns PDFs into the most faithful <b>Markdown</b>? Which <b>OCR engine</b> reads images best, which
-<b>speech-to-text</b> engine makes the fewest mistakes, and which library <b>detects languages</b> best? Document
-libraries run on the same odd real-world files from the test collections of pdf.js, Apache POI and Apache Tika (bug
-reports, fuzzers, broken exporters); the others on pages, images, audio and texts with known answers.
-Every new release on PyPI is tested again by itself.</p>
+<p class="lead">Which Python library should read your files? Libraries for <b>PDF</b>, <b>Word, Excel and PowerPoint</b>,
+<b>PDF → Markdown</b>, <b>OCR</b>, <b>speech-to-text</b> and <b>language detection</b>, run on thousands of real test files:
+bug reports, fuzzer output and broken exporters, or pages, images and audio with known answers.
+Every new PyPI release is tested again by itself.</p>
 <div class="mut">Updated {built}. Lower is better in the 🔴 🟡 ⏱ columns; the table is sorted by them (the any-document table: by files turned into text). Click a library to
 see every file it failed on, with the error, and what changed between its versions.
 New releases as they are tested: <a href="feed.xml">Atom feed</a>.</div>
