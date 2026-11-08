@@ -1,0 +1,16 @@
+{
+ "pkg": "pypdfium2",
+ "version": "5.15.1",
+ "corpus": "pdfjs",
+ "corpus_commit": "50d130738a150d43669c9554909020661ded5997",
+ "timeout_s": 60.0,
+ "python": "3.13.18",
+ "machine": "Linux x86_64, 4 CPUs",
+ "installed": [
+  "pip==26.2.2",
+  "pypdfium2==5.15.1"
+ ],
+ "finished": "2026-11-08T05:02:24Z",
+ "run_url": "https://github.com/prometheus-maker/reader-board/actions/runs/42449138464",
+ "engine": ""
+}
