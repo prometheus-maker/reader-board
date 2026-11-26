@@ -1,0 +1,27 @@
+{
+ "pkg": "pymupdf",
+ "version": "2.2",
+ "corpus": "pdfjs",
+ "corpus_commit": "50d130738a150d43669c9554909020661ded5997",
+ "timeout_s": 60.0,
+ "python": "3.13.18",
+ "machine": "Linux x86_64, 4 CPUs",
+ "installed": [
+  "PyYAML==6.0.4",
+  "flatbuffers==25.12.19",
+  "networkx==3.7",
+  "numpy==2.5.5",
+  "onnxruntime==1.32.0",
+  "packaging==26.4",
+  "pip==26.2.2",
+  "protobuf==7.36.2",
+  "psutil==7.2.2",
+  "pymupdf4llm==2.2",
+  "pymupdf==2.2",
+  "pymupdf_layout==2.2",
+  "tabulate==0.10.0"
+ ],
+ "finished": "2026-11-26T05:24:34Z",
+ "run_url": "https://github.com/prometheus-maker/reader-board/actions/runs/45761315076",
+ "engine": ""
+}
